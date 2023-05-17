@@ -55,7 +55,6 @@ public class Snapshot {
     private List<Record> records = new ArrayList<>();
     private final Map<Key, Record> index = new HashMap<>();
 
-
     public Snapshot() {
     }
 
@@ -209,17 +208,21 @@ public class Snapshot {
         for (Record r : recs) {
             ObjectNode node = MAPPER.createObjectNode();
             for (int i = 0; i < columns.length; i++) {
-                switch (this.columnTypes.get(columns[i])) {
-                    case BIT -> node.put(columns[i], String.valueOf(r.columns[i]));
-                    case INTEGER, TINYINT -> node.put(columns[i], Integer.valueOf(r.columns[i]));
-                    case SMALLINT -> node.put(columns[i], Short.valueOf(r.columns[i]));
-                    case BIGINT -> node.put(columns[i], Long.valueOf(r.columns[i]));
-                    case FLOAT -> node.put(columns[i], Float.valueOf(r.columns[i]));
-                    case REAL, DOUBLE -> node.put(columns[i], Double.valueOf(r.columns[i]));
-                    case NUMERIC -> node.put(columns[i], Long.parseLong(r.columns[i]));
-                    case DECIMAL -> node.put(columns[i], BigDecimal.valueOf(Long.parseLong(r.columns[i])));
-                    case NULL -> node.put(columns[i], (String) null);
-                    default -> node.put(columns[i], r.columns[i]);
+                if ("null".equals(r.columns[i]))
+                    node.put(columns[i], (String) null);
+                else {
+                    switch (this.columnTypes.get(columns[i])) {
+                        case BIT -> node.put(columns[i], String.valueOf(r.columns[i]));
+                        case INTEGER, TINYINT -> node.put(columns[i], Integer.valueOf(r.columns[i]));
+                        case SMALLINT -> node.put(columns[i], Short.valueOf(r.columns[i]));
+                        case BIGINT -> node.put(columns[i], Long.valueOf(r.columns[i]));
+                        case FLOAT -> node.put(columns[i], Float.valueOf(r.columns[i]));
+                        case REAL, DOUBLE -> node.put(columns[i], Double.valueOf(r.columns[i]));
+                        case NUMERIC -> node.put(columns[i], Long.parseLong(r.columns[i]));
+                        case DECIMAL -> node.put(columns[i], BigDecimal.valueOf(Long.parseLong(r.columns[i])));
+                        case NULL -> node.put(columns[i], (String) null);
+                        default -> node.put(columns[i], r.columns[i]);
+                    }
                 }
             }
             rows.add(node);
@@ -264,6 +267,7 @@ public class Snapshot {
         public int hashCode() {
             return Arrays.hashCode(columns);
         }
+
     }
 
     public static class Record {

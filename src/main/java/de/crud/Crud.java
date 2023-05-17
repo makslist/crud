@@ -100,8 +100,11 @@ public class Crud {
             boolean isMixedCase = conn.getMetaData().storesMixedCaseIdentifiers();
             List<String> pkColumns = new ArrayList<>();
             while (rsPk.next()) {
-                String columnName = rsPk.getString("COLUMN_NAME");
-                pkColumns.add(isMixedCase ? columnName : columnName.toLowerCase());
+                String schema = rsPk.getString("TABLE_SCHEM");
+                if ("xx".equalsIgnoreCase(schema)) {
+                    String columnName = rsPk.getString("COLUMN_NAME");
+                    pkColumns.add(isMixedCase ? columnName : columnName.toLowerCase());
+                }
             }
             return pkColumns;
         } catch (SQLException e) {
@@ -146,11 +149,11 @@ public class Crud {
                         case DATE -> SQL_DATE_FORMAT.format(rs.getDate(i));
                         case TIME -> rs.getTime(i).toLocalTime().toString();
                         case TIMESTAMP ->
-                                new SimpleDateFormat("yyyyMMdd").format(new Date(rs.getTimestamp(i).getTime()));
+                            new SimpleDateFormat("yyyyMMdd").format(new Date(rs.getTimestamp(i).getTime()));
                         case TIME_WITH_TIMEZONE, TIMESTAMP_WITH_TIMEZONE, BINARY, BIT, ROWID -> rs.getString(i);
                         case CLOB, NCLOB -> rs.getClob(i).toString();
                         case BLOB ->
-                                new String(Base64.getEncoder().encode(rs.getBlob(i).getBytes(0L, (int) rs.getBlob(i).length())));
+                            new String(Base64.getEncoder().encode(rs.getBlob(i).getBytes(0L, (int) rs.getBlob(i).length())));
                         default -> rs.getString(i);
                     };
                 }
