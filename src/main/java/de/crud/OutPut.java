@@ -38,7 +38,7 @@ public class OutPut {
     }
 
     public enum Level {
-        USER, ERROR, SILENT, INFO, DEBUG
+        SILENT, ERROR, USER, INFO, DEBUG
     }
 
 }

@@ -1,9 +1,6 @@
 package de.crud;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 
 public class FormattedTypesInSqlTest {
 
@@ -30,53 +27,48 @@ public class FormattedTypesInSqlTest {
     @Test
     void insertNumbers() {
         crud.execute("insert into numtypes (pk, col2, col3, col4, col5, col6, col7, col8, col9, col10) values ('abc', 1, 2, 3, 1, 5, 6, 7, 8, 9)");
-        Snapshot before = crud.fetch("numtypes", null);
+        Snapshot reference = crud.fetch("numtypes");
         crud.execute("delete numtypes");
-        Snapshot empty = crud.fetch("numtypes", null);
-        ChangeSet change = before.diff(empty);
-        for (String sql : change.sqlApplyStmt()) crud.execute(sql);
-        Snapshot after = crud.fetch("numtypes", null);
-        ChangeSet nothing = before.diff(after);
+
+        for (String sql : reference.delta(crud.fetch("numtypes")).sqlApplyStmt()) crud.execute(sql);
+
+        ChangeSet nothing = reference.delta(crud.fetch("numtypes"));
         Assertions.assertTrue(nothing.isEmpty());
     }
 
     @Test
     void insertDate() {
         crud.execute("insert into datetypes (pk, col12, col13, col14) values ('abc', CURRENT_DATE, CURRENT_TIME, CURRENT_DATE)");
-        Snapshot before = crud.fetch("datetypes", null);
+        Snapshot reference = crud.fetch("datetypes");
         crud.execute("delete datetypes");
-        Snapshot empty = crud.fetch("datetypes", null);
-        ChangeSet change = before.diff(empty);
-        for (String sql : change.sqlApplyStmt()) crud.execute(sql);
-        Snapshot after = crud.fetch("datetypes", null);
-        ChangeSet nothing = before.diff(after);
-        Assertions.assertTrue(nothing.isEmpty());
+
+        for (String sql : reference.delta(crud.fetch("datetypes")).sqlApplyStmt()) crud.execute(sql);
+
+        Assertions.assertTrue(reference.delta(crud.fetch("datetypes")).isEmpty());
     }
 
     @Test
     void insertBinary() {
         crud.execute("insert into binarytypes (pk, col11, col17, col18, col20) values ('abc', 1, CAST(X'00000001' AS BINARY(4)), 3, 4)");
-        Snapshot before = crud.fetch("binarytypes", null);
+        Snapshot reference = crud.fetch("binarytypes");
         crud.execute("delete binarytypes");
-        Snapshot empty = crud.fetch("binarytypes", null);
-        ChangeSet change = before.diff(empty);
-        for (String sql : change.sqlApplyStmt()) crud.execute(sql);
-        Snapshot after = crud.fetch("binarytypes", null);
-        ChangeSet nothing = before.diff(after);
-        Assertions.assertTrue(nothing.isEmpty());
+
+        for (String sql : reference.delta(crud.fetch("binarytypes")).sqlApplyStmt()) crud.execute(sql);
+
+        Assertions.assertTrue(reference.delta(crud.fetch("binarytypes")).isEmpty());
     }
 
     @Test
     void insertLob() {
         crud.execute("insert into lobtypes (pk, col19, col22, col23) values ('abc', 1, 2, 3)");
-        Snapshot before = crud.fetch("lobtypes", null);
+        Snapshot reference = crud.fetch("lobtypes");
         crud.execute("delete lobtypes");
-        Snapshot empty = crud.fetch("lobtypes", null);
-        ChangeSet change = before.diff(empty);
-        for (String sql : change.sqlApplyStmt()) crud.execute(sql);
-        Snapshot after = crud.fetch("lobtypes", null);
-//        ChangeSet nothing = before.diff(after);
-//        Assertions.assertTrue(nothing.isEmpty());  //TODO compare CLOB with prefix
+
+        for (String sql : reference.delta(crud.fetch("lobtypes")).sqlApplyStmt()) crud.execute(sql);
+
+        Snapshot after = crud.fetch("lobtypes");
+        ChangeSet nothing = reference.delta(after);
+        Assertions.assertTrue(nothing.isEmpty());
     }
 
 }

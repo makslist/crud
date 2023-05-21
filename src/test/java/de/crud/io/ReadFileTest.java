@@ -1,15 +1,15 @@
 package de.crud.io;
 
-import de.crud.Snapshot;
-import org.junit.jupiter.api.Test;
+import de.crud.*;
+import org.junit.jupiter.api.*;
 
-import java.io.File;
+import java.io.*;
 
 public class ReadFileTest {
 
     @Test
-    void readOneFile() {
-        Snapshot entry = Snapshot.read(new File("/home/maks/ImportTest.entr"));
+    void readFile() {
+        Snapshot.read(new File("./test.snapshot"));
     }
 
 }

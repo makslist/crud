@@ -1,9 +1,6 @@
 package de.crud;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 
 public class ApplyChangesTest {
 
@@ -12,62 +9,69 @@ public class ApplyChangesTest {
     @BeforeEach
     void setUp() {
         crud = Crud.connectH2();
-        crud.execute("create table laeger (lager varchar(3), bez varchar(30), time_aen date, nr_lfd integer, time_neu time default CURRENT_TIME,PRIMARY KEY (lager, nr_lfd))");
+        crud.execute("create table tab (pk_char varchar(3), col_char varchar(30), col_date date, pk_int integer, col_time time default current_time, primary key (pk_char, pk_int))");
+
+        crud.execute("insert into tab (pk_char, col_char, col_date, pk_int) values ('111', 'test123', current_date, 1)");
+        crud.execute("insert into tab (pk_char, col_char, col_date, pk_int) values ('111', 'test123', current_date, 2)");
+        crud.execute("insert into tab (pk_char, col_char, col_date, pk_int) values ('111', 'test123', current_date, 3)");
+        crud.execute("insert into tab (pk_char, col_char, col_date, pk_int) values ('222', 'test123', current_date, 1)");
     }
 
     @AfterEach
     void tearDown() {
-        crud.execute("drop table laeger");
+        crud.execute("drop table tab");
         crud.close();
     }
 
     @Test
     void applyDelete() {
-        crud.execute("insert into laeger (lager, bez,time_aen, nr_lfd) values ('445', 'test989', CURRENT_DATE, 10)");
-        crud.execute("insert into laeger (lager, bez,time_aen, nr_lfd) values ('123', 'test789', CURRENT_DATE, 11)");
-        crud.execute("insert into laeger (lager, bez,time_aen, nr_lfd) values ('234', 'test139', CURRENT_DATE, 13)");
-        Snapshot reference = crud.fetch("laeger", null);
-        crud.execute("insert into laeger (lager, bez,time_aen, nr_lfd) values ('645', 'test489', CURRENT_DATE, 6)");
-        Snapshot target = crud.fetch("laeger", null);
-        ChangeSet change = reference.diff(target);
+        Snapshot reference = crud.fetch("tab");
+        crud.execute("insert into tab (pk_char, col_char, col_date, pk_int) values ('222', 'test123', current_date, 2)");
+
+        ChangeSet change = reference.delta(crud.fetch("tab"));
         Assertions.assertEquals(1, change.deleteRecs().size());
         Assertions.assertEquals(0, change.insertRecs().size());
         Assertions.assertEquals(0, change.updateRecs().size());
-        crud.apply(change);
-        Snapshot after = crud.fetch("laeger", null);
-        ChangeSet likeBefore = reference.diff(after);
-        Assertions.assertEquals(0, likeBefore.deleteRecs().size());
-        Assertions.assertEquals(0, likeBefore.insertRecs().size());
-        Assertions.assertEquals(0, likeBefore.updateRecs().size());
+        crud.apply(change, false);
+
+        ChangeSet empty = reference.delta(crud.fetch("tab"));
+        Assertions.assertEquals(0, empty.deleteRecs().size());
+        Assertions.assertEquals(0, empty.insertRecs().size());
+        Assertions.assertEquals(0, empty.updateRecs().size());
     }
 
     @Test
     void applyInsert() {
-        crud.execute("insert into laeger (lager, bez,time_aen, nr_lfd) values ('123', 'test123', CURRENT_DATE, 1)");
-        crud.execute("insert into laeger (lager, bez,time_aen, nr_lfd) values ('445', 'test989', CURRENT_DATE, 10)");
-        crud.execute("insert into laeger (lager, bez,time_aen, nr_lfd) values ('234', 'test139', CURRENT_DATE, 13)");
-        Snapshot reference = crud.fetch("laeger", null);
-        crud.execute("delete laeger where lager = '445'");
-        Snapshot target = crud.fetch("laeger", null);
-        ChangeSet change = reference.diff(target);
+        Snapshot reference = crud.fetch("tab");
+        crud.execute("delete tab where pk_char = '222'");
+
+        ChangeSet change = reference.delta(crud.fetch("tab"));
         Assertions.assertEquals(0, change.deleteRecs().size());
         Assertions.assertEquals(1, change.insertRecs().size());
         Assertions.assertEquals(0, change.updateRecs().size());
-        crud.apply(change);
+        crud.apply(change, false);
+
+        ChangeSet empty = reference.delta(crud.fetch("tab"));
+        Assertions.assertEquals(0, empty.deleteRecs().size());
+        Assertions.assertEquals(0, empty.insertRecs().size());
+        Assertions.assertEquals(0, empty.updateRecs().size());
     }
 
     @Test
     void applyUpdate() {
-        crud.execute("insert into laeger (lager, bez,time_aen, nr_lfd) values ('123', 'test123', CURRENT_DATE, 1)");
-        crud.execute("insert into laeger (lager, bez,time_aen, nr_lfd) values ('645', 'test489', CURRENT_DATE, 6)");
-        Snapshot reference = crud.fetch("laeger", null);
-        crud.execute("update laeger set bez = 'changed data' where lager = '645'");
-        Snapshot target = crud.fetch("laeger", null);
-        ChangeSet change = reference.diff(target);
+        Snapshot reference = crud.fetch("tab");
+        crud.execute("update tab set col_char = 'changed data' where pk_char = '222'");
+
+        ChangeSet change = reference.delta(crud.fetch("tab"));
         Assertions.assertEquals(0, change.deleteRecs().size());
         Assertions.assertEquals(0, change.insertRecs().size());
         Assertions.assertEquals(1, change.updateRecs().size());
-        crud.apply(change);
+        crud.apply(change, false);
+
+        ChangeSet empty = reference.delta(crud.fetch("tab"));
+        Assertions.assertEquals(0, empty.deleteRecs().size());
+        Assertions.assertEquals(0, empty.insertRecs().size());
+        Assertions.assertEquals(0, empty.updateRecs().size());
     }
 
 }

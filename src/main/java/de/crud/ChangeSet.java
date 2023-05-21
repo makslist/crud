@@ -1,14 +1,10 @@
 package de.crud;
 
-import javax.sql.rowset.serial.SerialBlob;
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.sql.Time;
+import javax.sql.rowset.serial.*;
+import java.math.*;
+import java.sql.*;
 import java.util.*;
-import java.util.stream.Collectors;
+import java.util.stream.*;
 
 import static java.sql.Types.*;
 
@@ -57,12 +53,12 @@ public class ChangeSet {
     }
 
     public void displayDiff() {
-        Map<String, Integer> colTypes = getReference().getColumnTypes();
+        Map<String, Snapshot.SqlType> colTypes = getReference().getColumnTypes();
 
         String[] columnNames = getReference().columns().toArray(String[]::new);
-        String recordFormatter = Arrays.stream(columnNames).map(n -> "%" + (alignRight(colTypes.get(n)) ? "-" : "") + 12 + "s").collect(Collectors.joining(" | "));
+        String recordFormatter = Arrays.stream(columnNames).map(n -> "%" + (alignRight(colTypes.get(n).type) ? "-" : "") + 12 + "s").collect(Collectors.joining(" | "));
         String[] keyColumnNames = getReference().pkColumns().toArray(String[]::new);
-        String keyFormatter = Arrays.stream(keyColumnNames).map(n -> "%" + (alignRight(colTypes.get(n)) ? "-" : "") + 12 + "s").collect(Collectors.joining(" | "));
+        String keyFormatter = Arrays.stream(keyColumnNames).map(n -> "%" + (alignRight(colTypes.get(n).type) ? "-" : "") + 12 + "s").collect(Collectors.joining(" | "));
 
         if (!insertKeys.isEmpty()) {
             output.user("New Records:");
@@ -152,30 +148,77 @@ public class ChangeSet {
         }
     }
 
-
     private boolean alignRight(int type) {
-        return switch (type) {
-            case SMALLINT, TINYINT, INTEGER, BIGINT, NUMERIC, DECIMAL, FLOAT, REAL, DOUBLE, BOOLEAN -> false;
-            default -> true;
-        };
+        switch (type) {
+            case SMALLINT:
+            case TINYINT:
+            case INTEGER:
+            case BIGINT:
+            case NUMERIC:
+            case DECIMAL:
+            case FLOAT:
+            case REAL:
+            case DOUBLE:
+            case BOOLEAN:
+                return false;
+            default:
+                return true;
+        }
     }
-
 
     private void bindVar(PreparedStatement stmt, int type, int index, String value) throws SQLException {
         switch (type) {
-            case SMALLINT -> stmt.setShort(index, Short.parseShort(value));
-            case TINYINT, INTEGER -> stmt.setInt(index, Integer.parseInt(value));
-            case BIGINT -> stmt.setLong(index, Long.parseLong(value));
-            case NUMERIC, DECIMAL -> stmt.setBigDecimal(index, new BigDecimal(value));
-            case FLOAT -> stmt.setFloat(index, Float.parseFloat(value));
-            case REAL, DOUBLE -> stmt.setDouble(index, Double.parseDouble(value));
-            case BOOLEAN -> stmt.setBoolean(index, Boolean.parseBoolean(value));
-            case DATE -> stmt.setDate(index, java.sql.Date.valueOf(value));
-            case TIME -> stmt.setTime(index, Time.valueOf(value));
-            case TIMESTAMP, TIME_WITH_TIMEZONE, TIMESTAMP_WITH_TIMEZONE, BINARY, BIT, NCLOB, NULL, OTHER, REF, ROWID, SQLXML, VARBINARY, CLOB ->
-                    stmt.setClob(index, new javax.sql.rowset.serial.SerialClob(value.toCharArray()));
-            case BLOB -> stmt.setBlob(index, new SerialBlob(Base64.getDecoder().decode(value.getBytes())));
-            default -> stmt.setString(index, value);
+            case SMALLINT:
+                stmt.setShort(index, Short.parseShort(value));
+                break;
+            case TINYINT:
+            case INTEGER:
+                stmt.setInt(index, Integer.parseInt(value));
+                break;
+            case BIGINT:
+                stmt.setLong(index, Long.parseLong(value));
+                break;
+            case NUMERIC:
+            case DECIMAL:
+                stmt.setBigDecimal(index, new BigDecimal(value));
+                break;
+            case FLOAT:
+                stmt.setFloat(index, Float.parseFloat(value));
+                break;
+            case REAL:
+            case DOUBLE:
+                stmt.setDouble(index, Double.parseDouble(value));
+                break;
+            case BOOLEAN:
+                stmt.setBoolean(index, Boolean.parseBoolean(value));
+                break;
+            case DATE:
+                stmt.setDate(index, java.sql.Date.valueOf(value));
+                break;
+            case TIME:
+                stmt.setTime(index, Time.valueOf(value));
+                break;
+            case TIMESTAMP:
+            case TIME_WITH_TIMEZONE:
+            case TIMESTAMP_WITH_TIMEZONE:
+            case BINARY:
+            case BIT:
+            case NULL:
+            case OTHER:
+            case REF:
+            case ROWID:
+            case SQLXML:
+            case VARBINARY:
+            case NCLOB:
+            case CLOB:
+                stmt.setClob(index, new SerialClob(value.toCharArray()));
+                break;
+            case BLOB:
+                stmt.setBlob(index, new SerialBlob(Base64.getDecoder().decode(value.getBytes())));
+                break;
+            default:
+                stmt.setString(index, value);
+                break;
         }
     }
 
@@ -229,16 +272,33 @@ public class ChangeSet {
     }
 
     private String formatSqlDataType(int columnType, String value) {
-        return switch (columnType) {
-            case DATE -> "DATE" + "'" + value + "'";
-            case TIME -> "TIME" + "'" + value + "'";
-            case TIMESTAMP -> "TIMESTAMP" + "'" + value + "'";
-            case SMALLINT, TINYINT, INTEGER, BIGINT, NUMERIC, DECIMAL, FLOAT, REAL, DOUBLE, BOOLEAN -> value;
-            case NULL -> null;
-            case NCLOB, CLOB -> value.replaceFirst("clob[0-9]+: ", "");
-            case BLOB -> new BigInteger(Base64.getDecoder().decode(value.getBytes())).toString(16);
-            default -> "'" + value + "'";
-        };
+        switch (columnType) {
+            case DATE:
+                return "DATE" + "'" + value + "'";
+            case TIME:
+                return "TIME" + "'" + value + "'";
+            case TIMESTAMP:
+                return "TIMESTAMP" + "'" + value + "'";
+            case SMALLINT:
+            case TINYINT:
+            case INTEGER:
+            case BIGINT:
+            case NUMERIC:
+            case DECIMAL:
+            case FLOAT:
+            case REAL:
+            case DOUBLE:
+            case BOOLEAN:
+                return value;
+            case NULL:
+                return null;
+            case BLOB:
+                return new BigInteger(Base64.getDecoder().decode(value.getBytes())).toString(16);
+            case NCLOB:
+            case CLOB:
+            default:
+                return "'" + value + "'";
+        }
     }
 
 }

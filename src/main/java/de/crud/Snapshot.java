@@ -1,20 +1,15 @@
 package de.crud;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.util.DefaultIndenter;
-import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
+import com.fasterxml.jackson.annotation.*;
+import com.fasterxml.jackson.core.util.*;
 import com.fasterxml.jackson.databind.*;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.jetbrains.annotations.NotNull;
+import com.fasterxml.jackson.databind.node.*;
 
 import java.io.*;
-import java.math.BigDecimal;
+import java.math.*;
 import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
+import java.util.function.*;
+import java.util.stream.*;
 
 import static java.sql.Types.*;
 
@@ -48,7 +43,7 @@ public class Snapshot {
     private String table;
     private String[] columns;
     private Map<String, Integer> columnIndex;
-    private Map<String, Integer> columnTypes;
+    private Map<String, SqlType> columnTypes;
     private Key pk;
     private List<Integer> pkIndices = new ArrayList<>();
     private String where;
@@ -58,7 +53,7 @@ public class Snapshot {
     public Snapshot() {
     }
 
-    public Snapshot(String table, String[] columns, Map<String, Integer> columnTypes, List<String> pkColumns, String where, List<String> ignoreColumns) {
+    public Snapshot(String table, String[] columns, Map<String, SqlType> columnTypes, List<String> pkColumns, String where) {
         this.table = table;
         this.columns = columns;
         this.columnIndex = IntStream.rangeClosed(0, columns.length - 1).boxed().collect(Collectors.toMap(i -> columns[i], Function.identity()));
@@ -66,6 +61,14 @@ public class Snapshot {
         this.pk = new Key(pkColumns);
         this.pkIndices = pkColumns.stream().map(columnIndex::get).collect(Collectors.toList());
         this.where = where;
+    }
+
+    @JsonProperty(COLUMNS)
+    public void setColumns(String[] columns) {
+        this.columns = columns;
+        this.columnIndex = IntStream.rangeClosed(0, columns.length - 1).boxed().collect(Collectors.toMap(i -> columns[i], Function.identity()));
+        if (pk != null)
+            this.pkIndices = pk.columns().map(columnIndex::get).collect(Collectors.toList());
     }
 
     public Stream<String> columns() {
@@ -92,12 +95,21 @@ public class Snapshot {
         return table;
     }
 
-    public Map<String, Integer> getColumnTypes() {
+    public String getWhere() {
+        return where;
+    }
+
+    @JsonProperty(WHERE)
+    public void setWhere(String where) {
+        this.where = where;
+    }
+
+    public Map<String, SqlType> getColumnTypes() {
         return this.columnTypes;
     }
 
     @JsonProperty(COLUMN_TYPES)
-    public void setColumnTypes(Map<String, Integer> columnTypes) {
+    public void setColumnTypes(Map<String, SqlType> columnTypes) {
         this.columnTypes = new HashMap<>();
         this.columnTypes.putAll(columnTypes);
     }
@@ -117,10 +129,8 @@ public class Snapshot {
     @JsonProperty(PRIMARY_KEY)
     public void setPkColumns(String[] columns) {
         this.pk = new Key(columns);
-    }
-
-    public String getWhere() {
-        return where;
+        if (columnIndex != null)
+            this.pkIndices = pk.columns().map(columnIndex::get).collect(Collectors.toList());
     }
 
     public List<Record> getRecords() {
@@ -130,7 +140,7 @@ public class Snapshot {
     @JsonProperty(RECORDS)
     public void setRecords(Map<String, String>[] columns) {
         this.records = new ArrayList<>();
-        List.of(columns).forEach(r -> {
+        Arrays.asList(columns).forEach(r -> {
             Record e = new Record(this, r.values().toArray(new String[0]));
             records.add(e);
             index.put(e.key(), e);
@@ -139,17 +149,21 @@ public class Snapshot {
 
     public void addRecord(String[] record) {
         Record rec = new Record(this, record);
-        if (columnTypes.size() != rec.size()) throw new RuntimeException("Column count is different.");
+        if (columns.length != rec.size()) throw new RuntimeException("Column count is different.");
 
         records.add(rec);
         index.put(rec.key(), rec);
     }
 
-    public ChangeSet diff(Snapshot target) {
-        return diff(target, Collections.emptyList());
+    public boolean isEmpty() {
+        return records.isEmpty();
     }
 
-    public ChangeSet diff(Snapshot target, List<String> ignoreColumns) {
+    public ChangeSet delta(Snapshot target) {
+        return delta(target, Collections.emptyList());
+    }
+
+    public ChangeSet delta(Snapshot target, List<String> ignoreColumns) {
         if (!table.equals(target.table)) throw new RuntimeException("The tables have to have the same name.");
         if (!Arrays.equals(columns, target.columns))
             throw new RuntimeException("The columns name and position have to be identical.");
@@ -173,14 +187,21 @@ public class Snapshot {
         } else return null;
     }
 
-    public void export(List<String> groupBy, OutputStream out) {
+    public void export(List<String> groupBy, File path) {
+        if (!groupBy.stream().allMatch(g -> columns().anyMatch(g::equalsIgnoreCase)))
+            throw new RuntimeException("Column does not exist in table.");
+
         Map<List<String>, List<Snapshot.Record>> groups = records.stream().collect(Collectors.groupingBy(rec -> groupBy.stream().map(rec::column).collect(Collectors.toList())));
 
         for (Map.Entry<List<String>, List<Snapshot.Record>> group : groups.entrySet()) {
-            StringJoiner whereGrp = new StringJoiner(" and ").add(where);
+            StringJoiner whereGrp = new StringJoiner(" and ");
+            if (where != null)
+                whereGrp.add(where);
+
             IntStream.range(0, group.getKey().size()).mapToObj(i -> groupBy.get(i) + " = " + group.getKey().get(i)).forEach(whereGrp::add);
+            StringJoiner filename = new StringJoiner("_", "", ".snapshot").add(getTable()).add(String.join("_", group.getKey()));
             try {
-                export(new FileOutputStream("/home/maks/" + whereGrp + ".snapshot"), whereGrp.toString(), group.getValue()); //TODO
+                export(new FileOutputStream(new File(path, filename.toString())), whereGrp.toString(), group.getValue());
             } catch (FileNotFoundException e) {
                 throw new RuntimeException(e);
             }
@@ -194,11 +215,16 @@ public class Snapshot {
     private void export(OutputStream out, String whereStmt, List<Record> recs) {
         ObjectNode root = MAPPER.createObjectNode();
         root.put(TABLE, this.table);
-        Arrays.stream(columns).forEach(root.putArray(COLUMNS)::add);
+        columns().forEach(root.putArray(COLUMNS)::add);
 
         ObjectNode colTypes = MAPPER.createObjectNode();
-        for (Map.Entry<String, Integer> entry : this.columnTypes.entrySet())
-            colTypes.put(entry.getKey(), entry.getValue());
+        for (Map.Entry<String, SqlType> entry : this.columnTypes.entrySet()) {
+            ObjectNode type = MAPPER.createObjectNode();
+            type.put("type", entry.getValue().type);
+            type.put("precision", entry.getValue().precision);
+            type.put("scale", entry.getValue().scale);
+            colTypes.putIfAbsent(entry.getKey(), type);
+        }
         root.putIfAbsent(COLUMN_TYPES, colTypes);
 
         Arrays.stream(this.pk.columns).forEach(root.putArray(PRIMARY_KEY)::add);
@@ -211,17 +237,39 @@ public class Snapshot {
                 if ("null".equals(r.columns[i]))
                     node.put(columns[i], (String) null);
                 else {
-                    switch (this.columnTypes.get(columns[i])) {
-                        case BIT -> node.put(columns[i], String.valueOf(r.columns[i]));
-                        case INTEGER, TINYINT -> node.put(columns[i], Integer.valueOf(r.columns[i]));
-                        case SMALLINT -> node.put(columns[i], Short.valueOf(r.columns[i]));
-                        case BIGINT -> node.put(columns[i], Long.valueOf(r.columns[i]));
-                        case FLOAT -> node.put(columns[i], Float.valueOf(r.columns[i]));
-                        case REAL, DOUBLE -> node.put(columns[i], Double.valueOf(r.columns[i]));
-                        case NUMERIC -> node.put(columns[i], Long.parseLong(r.columns[i]));
-                        case DECIMAL -> node.put(columns[i], BigDecimal.valueOf(Long.parseLong(r.columns[i])));
-                        case NULL -> node.put(columns[i], (String) null);
-                        default -> node.put(columns[i], r.columns[i]);
+                    switch (this.columnTypes.get(columns[i]).type) {
+                        case BIT:
+                            node.put(columns[i], String.valueOf(r.columns[i]));
+                            break;
+                        case INTEGER:
+                        case TINYINT:
+                            node.put(columns[i], Integer.valueOf(r.columns[i]));
+                            break;
+                        case SMALLINT:
+                            node.put(columns[i], Short.valueOf(r.columns[i]));
+                            break;
+                        case BIGINT:
+                            node.put(columns[i], Long.valueOf(r.columns[i]));
+                            break;
+                        case FLOAT:
+                            node.put(columns[i], Float.valueOf(r.columns[i]));
+                            break;
+                        case REAL:
+                        case DOUBLE:
+                            node.put(columns[i], Double.valueOf(r.columns[i]));
+                            break;
+                        case NUMERIC:
+                            node.put(columns[i], Long.parseLong(r.columns[i]));
+                            break;
+                        case DECIMAL:
+                            node.put(columns[i], BigDecimal.valueOf(Long.parseLong(r.columns[i])));
+                            break;
+                        case NULL:
+                            node.put(columns[i], (String) null);
+                            break;
+                        default:
+                            node.put(columns[i], r.columns[i]);
+                            break;
                     }
                 }
             }
@@ -232,6 +280,132 @@ public class Snapshot {
             objectWriter.writeValue(out, root);
         } catch (IOException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    public static class SqlType {
+
+        int type;
+        int precision;
+
+        int scale;
+
+        public SqlType() {
+        }
+
+        public SqlType(int type, int precision, int scale) {
+            this.type = type;
+            this.precision = precision;
+            this.scale = scale;
+        }
+
+        public int getType() {
+            return type;
+        }
+
+        public void setType(int type) {
+            this.type = type;
+        }
+
+        public int getPrecision() {
+            return precision;
+        }
+
+        public void setPrecision(int precision) {
+            this.precision = precision;
+        }
+
+        public int getScale() {
+            return scale;
+        }
+
+        public void setScale(int scale) {
+            this.scale = scale;
+        }
+
+        public String getSql() {
+            switch (type) {
+                case BIT:
+                    return "bit";
+                case TINYINT:
+                    return "tinyint";
+                case SMALLINT:
+                    return "smallint";
+                case INTEGER:
+                    return "integer";
+                case BIGINT:
+                    return "bigint";
+                case FLOAT:
+                    return "float";
+                case REAL:
+                    return "real";
+                case DOUBLE:
+                    return "double";
+                case NUMERIC:
+                    return "numeric";
+                case DECIMAL:
+                    return "decimal";
+                case CHAR:
+                    return "char";
+                case VARCHAR:
+                    return "varchar(" + precision + ")";
+                case LONGVARCHAR:
+                    return "longvarchar";
+                case DATE:
+                    return "date";
+                case TIME:
+                    return "time";
+                case TIMESTAMP:
+                    return "timestamp";
+                case BINARY:
+                    return "binary";
+                case VARBINARY:
+                    return "varbinary";
+                case LONGVARBINARY:
+                    return "longvarbinary";
+                case NULL:
+                    return "null";
+                case OTHER:
+                    return "other";
+                case JAVA_OBJECT:
+                    return "java_object";
+                case DISTINCT:
+                    return "distinct";
+                case STRUCT:
+                    return "struct";
+                case ARRAY:
+                    return "array";
+                case BLOB:
+                    return "blob";
+                case CLOB:
+                    return "clob";
+                case REF:
+                    return "ref";
+                case DATALINK:
+                    return "datalink";
+                case BOOLEAN:
+                    return "boolean";
+                case ROWID:
+                    return "rowid";
+                case NCHAR:
+                    return "nchar";
+                case NVARCHAR:
+                    return "nvarchar";
+                case LONGNVARCHAR:
+                    return "longnvarchar";
+                case NCLOB:
+                    return "nclob";
+                case SQLXML:
+                    return "sqlxml";
+                case REF_CURSOR:
+                    return "ref_cursor";
+                case TIME_WITH_TIMEZONE:
+                    return "time_with_timezone";
+                case TIMESTAMP_WITH_TIMEZONE:
+                    return "timestamp_with_timezone";
+                default:
+                    throw new IllegalStateException("Unexpected value: " + type);
+            }
         }
     }
 
@@ -272,16 +446,16 @@ public class Snapshot {
 
     public static class Record {
 
-        private final Snapshot entries;
+        private final Snapshot snapshot;
         private final String[] columns;
 
-        protected Record(Snapshot entries, String[] columns) {
-            this.entries = entries;
+        protected Record(Snapshot snapshot, String[] columns) {
+            this.snapshot = snapshot;
             this.columns = columns;
         }
 
         public String column(String name) {
-            return columns[entries.columnIndex.get(name)];
+            return columns[snapshot.columnIndex.get(name)];
         }
 
         public Stream<String> columns() {
@@ -289,31 +463,27 @@ public class Snapshot {
         }
 
         public Integer columnType(String name) {
-            return entries.getColumnTypes().get(name);
+            return snapshot.getColumnTypes().get(name).type;
         }
 
         public Key key() {
-            return new Key(entries.pkIndices.stream().map(i -> columns[i]).collect(Collectors.toList()));
+            return new Key(snapshot.pkIndices.stream().map(i -> columns[i]).collect(Collectors.toList()));
         }
 
-        public String diff(Record record) {
-            StringJoiner sj = new StringJoiner(", ");
-            for (int i = 0; i < columns.length; i++)
-                if (columns[i].equals(record.columns[i]))
-                    sj.add(columns[i] + " (" + "\u001B31;1m" + record.columns[i] + ") ");
-            return sj.toString();
-        }
-
-        public boolean equals(@NotNull Record comp, boolean[] useColumn) {
-            if (useColumn != null) {
-                for (int i = 0; i < useColumn.length; i++)
-                    if (useColumn[i] && !Objects.equals(columns[i], comp.columns[i])) return false;
-                return true;
-            } else return Arrays.equals(columns, comp.columns);
+        public boolean equals(Record comp, boolean[] useColumn) {
+            for (int i = 0; i < columns.length; i++) {
+                if (useColumn != null && !useColumn[i]) continue;
+                if (!Objects.equals(columns[i], comp.columns[i])) return false;
+            }
+            return true;
         }
 
         public int size() {
             return columns.length;
+        }
+
+        public String toString() {
+            return Arrays.toString(columns);
         }
 
     }

@@ -1,12 +1,13 @@
 package de.crud;
 
-import oracle.jdbc.pool.OracleDataSource;
+import oracle.jdbc.pool.*;
 
 import java.io.*;
 import java.sql.*;
-import java.text.SimpleDateFormat;
+import java.text.*;
 import java.util.Date;
 import java.util.*;
+import java.util.stream.*;
 
 import static java.sql.Types.*;
 
@@ -19,7 +20,7 @@ public class Crud {
     public static Crud connectHSQL() {
         try {
             Class.forName("org.hsqldb.jdbcDriver");
-            return new Crud(DriverManager.getConnection("jdbc:hsqldb:data/tutorial", "sa", ""));
+            return new Crud("sa", DriverManager.getConnection("jdbc:hsqldb:data/tutorial", "sa", ""));
         } catch (SQLException e) {
             output.error("Connection unsuccessful: " + e.getMessage());
             System.exit(1);
@@ -32,7 +33,7 @@ public class Crud {
     public static Crud connectMySql(String hostname, int port, String serviceName, String user, String password) {
         try {
             Class.forName("org.gjt.mm.mysql.Driver");
-            return new Crud(DriverManager.getConnection("jdbc:mysql://" + hostname + ":" + port + "/" + serviceName, user, password));
+            return new Crud(user, DriverManager.getConnection("jdbc:mysql://" + hostname + ":" + port + "/" + serviceName, user, password));
         } catch (SQLException e) {
             output.error("Connection unsuccessful: " + e.getMessage());
             System.exit(1);
@@ -44,7 +45,7 @@ public class Crud {
 
     public static Crud connectH2() {
         try {
-            return new Crud(DriverManager.getConnection("jdbc:h2:mem:myDb;DB_CLOSE_DELAY=-1", "sa", "sa"));
+            return new Crud("sa", DriverManager.getConnection("jdbc:h2:mem:myDb;DB_CLOSE_DELAY=-1", "sa", "sa"));
         } catch (SQLException e) {
             output.error("Connection unsuccessful: " + e.getMessage());
             System.exit(1);
@@ -58,7 +59,7 @@ public class Crud {
             ods.setURL("jdbc:oracle:thin:@//" + hostname + ":" + port + "/" + serviceName);
             ods.setUser(user);
             ods.setPassword(password);
-            return new Crud(ods.getConnection());
+            return new Crud(user, ods.getConnection());
         } catch (SQLException e) {
             output.error("Connection unsuccessful: " + e.getMessage());
             System.exit(1);
@@ -69,7 +70,10 @@ public class Crud {
     private final Connection conn;
     private final boolean isMixedCase;
 
-    private Crud(Connection conn) throws SQLException {
+    private final String user;
+
+    private Crud(String user, Connection conn) throws SQLException {
+        this.user = user;
         this.conn = conn;
         this.conn.setAutoCommit(false);
         this.isMixedCase = conn.getMetaData().storesMixedCaseIdentifiers();
@@ -101,7 +105,10 @@ public class Crud {
             List<String> pkColumns = new ArrayList<>();
             while (rsPk.next()) {
                 String schema = rsPk.getString("TABLE_SCHEM");
-                if ("xx".equalsIgnoreCase(schema)) {
+                if (user.equalsIgnoreCase(schema)) {
+                    String columnName = rsPk.getString("COLUMN_NAME");
+                    pkColumns.add(isMixedCase ? columnName : columnName.toLowerCase());
+                } else if ("PUBLIC".equalsIgnoreCase(schema)) {
                     String columnName = rsPk.getString("COLUMN_NAME");
                     pkColumns.add(isMixedCase ? columnName : columnName.toLowerCase());
                 }
@@ -112,8 +119,30 @@ public class Crud {
         }
     }
 
-    public Snapshot fetchTable(String table) {
+    public Snapshot fetch(String table) {
         return fetch(table, null);
+    }
+
+    public ChangeSet delta(Snapshot snapshot, List<String> ignoreColumns) {
+        Snapshot current = fetch(snapshot.getTable(), snapshot.getWhere());
+        return snapshot.delta(current, ignoreColumns);
+    }
+
+    public boolean existsOrCreate(Snapshot snapshot) {
+        try {
+            PreparedStatement stmt = conn.prepareStatement("select * from " + snapshot.getTable() + " where 1 = 2");
+            return stmt.execute();
+        } catch (SQLException e) {
+            try {
+                String sql = "create table " + snapshot.getTable() + " ("
+                        + snapshot.columns().map(c -> c + " "
+                        + (snapshot.getColumnTypes().get(c).getSql())).collect(Collectors.joining(", "))
+                        + ", primary key (" + snapshot.pkColumns().collect(Collectors.joining(", ")) + "))";
+                return conn.prepareStatement(sql).execute();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+        }
     }
 
     public Snapshot fetch(String table, String whereStmt) {
@@ -124,38 +153,74 @@ public class Crud {
             ResultSetMetaData rsmd = rs.getMetaData();
             int columnCount = rsmd.getColumnCount();
 
-            Map<String, Integer> columnTypes = new HashMap<>();
+            Map<String, Snapshot.SqlType> columnTypes = new HashMap<>();
             String[] columns = new String[columnCount];
             for (int i = 1; i <= columnCount; i++) {
                 String columnName = isMixedCase ? rsmd.getColumnName(i) : rsmd.getColumnName(i).toLowerCase();
-                columnTypes.put(columnName, rsmd.getColumnType(i));
+                columnTypes.put(columnName, new Snapshot.SqlType(rsmd.getColumnType(i), rsmd.getPrecision(i), rsmd.getScale(i)));
                 columns[i - 1] = columnName;
             }
 
-            Snapshot snapshot = new Snapshot(table, columns, columnTypes, descPkOf(table), whereStmt, new ArrayList<>());
+            Snapshot snapshot = new Snapshot(table, columns, columnTypes, descPkOf(table), whereStmt);
 
             while (rs.next()) {
                 String[] record = new String[columnCount];
                 for (int i = 1; i <= columnCount; i++) {
-                    record[i - 1] = switch (rsmd.getColumnType(i)) {
-                        case SMALLINT -> String.valueOf(rs.getShort(i));
-                        case TINYINT, INTEGER -> String.valueOf(rs.getInt(i));
-                        case BIGINT -> String.valueOf(rs.getLong(i));
-                        case NUMERIC, DECIMAL -> String.valueOf(rs.getBigDecimal(i));
-                        case FLOAT -> String.valueOf(rs.getFloat(i));
-                        case REAL, DOUBLE -> String.valueOf(rs.getDouble(i));
-                        case BOOLEAN -> String.valueOf(rs.getBoolean(i));
-                        case NULL -> null;
-                        case DATE -> SQL_DATE_FORMAT.format(rs.getDate(i));
-                        case TIME -> rs.getTime(i).toLocalTime().toString();
-                        case TIMESTAMP ->
-                            new SimpleDateFormat("yyyyMMdd").format(new Date(rs.getTimestamp(i).getTime()));
-                        case TIME_WITH_TIMEZONE, TIMESTAMP_WITH_TIMEZONE, BINARY, BIT, ROWID -> rs.getString(i);
-                        case CLOB, NCLOB -> rs.getClob(i).toString();
-                        case BLOB ->
-                            new String(Base64.getEncoder().encode(rs.getBlob(i).getBytes(0L, (int) rs.getBlob(i).length())));
-                        default -> rs.getString(i);
-                    };
+                    switch (rsmd.getColumnType(i)) {
+                        case SMALLINT:
+                            record[i - 1] = String.valueOf(rs.getShort(i));
+                            break;
+                        case TINYINT:
+                        case INTEGER:
+                            record[i - 1] = String.valueOf(rs.getInt(i));
+                            break;
+                        case BIGINT:
+                            record[i - 1] = String.valueOf(rs.getLong(i));
+                            break;
+                        case NUMERIC:
+                        case DECIMAL:
+                            record[i - 1] = String.valueOf(rs.getBigDecimal(i));
+                            break;
+                        case FLOAT:
+                            record[i - 1] = String.valueOf(rs.getFloat(i));
+                            break;
+                        case REAL:
+                        case DOUBLE:
+                            record[i - 1] = String.valueOf(rs.getDouble(i));
+                            break;
+                        case BOOLEAN:
+                            record[i - 1] = String.valueOf(rs.getBoolean(i));
+                            break;
+                        case NULL:
+                            record[i - 1] = null;
+                            break;
+                        case DATE:
+                            record[i - 1] = SQL_DATE_FORMAT.format(rs.getDate(i));
+                            break;
+                        case TIME:
+                            record[i - 1] = rs.getTime(i).toLocalTime().toString();
+                            break;
+                        case TIMESTAMP:
+                            record[i - 1] =
+                                    new SimpleDateFormat("yyyyMMdd").format(new Date(rs.getTimestamp(i).getTime()));
+                            break;
+                        case TIME_WITH_TIMEZONE:
+                        case TIMESTAMP_WITH_TIMEZONE:
+                        case BINARY:
+                        case BIT:
+                            break;
+                        case NCLOB:
+                        case CLOB:
+                            Clob clob = rs.getClob(i);
+                            record[i - 1] = clob.getSubString(1, (int) clob.length());
+                            break;
+                        case BLOB:
+                            record[i - 1] = new String(Base64.getEncoder().encode(rs.getBlob(i).getBytes(0L, (int) rs.getBlob(i).length())));
+                            break;
+                        default:
+                            record[i - 1] = rs.getString(i);
+                            break;
+                    }
                 }
                 snapshot.addRecord(record);
             }
@@ -165,10 +230,15 @@ public class Crud {
         }
     }
 
-    public void apply(ChangeSet changes) {
+    public void apply(ChangeSet changes, boolean commit) {
         changes.applyInsert(conn);
         changes.applyUpdate(conn);
         changes.applyDelete(conn);
+        if (commit)
+            execute("commit;");
+
+        for (String undoStmt : changes.sqlUndoStmt())
+            output.user(undoStmt);
     }
 
     public void write(ChangeSet changes, OutputStream out) {
@@ -179,12 +249,7 @@ public class Crud {
             writer.close();
         } catch (IOException e) {
             output.error("Failed writing: " + e.getMessage());
-            throw new RuntimeException(e);
         }
-    }
-
-    public Snapshot read(File file) {
-        return Snapshot.read(file);
     }
 
 }
