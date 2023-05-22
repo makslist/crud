@@ -67,8 +67,7 @@ public class Snapshot {
     public void setColumns(String[] columns) {
         this.columns = columns;
         this.columnIndex = IntStream.rangeClosed(0, columns.length - 1).boxed().collect(Collectors.toMap(i -> columns[i], Function.identity()));
-        if (pk != null)
-            this.pkIndices = pk.columns().map(columnIndex::get).collect(Collectors.toList());
+        if (pk != null) this.pkIndices = pk.columns().map(columnIndex::get).collect(Collectors.toList());
     }
 
     public Stream<String> columns() {
@@ -129,8 +128,7 @@ public class Snapshot {
     @JsonProperty(PRIMARY_KEY)
     public void setPkColumns(String[] columns) {
         this.pk = new Key(columns);
-        if (columnIndex != null)
-            this.pkIndices = pk.columns().map(columnIndex::get).collect(Collectors.toList());
+        if (columnIndex != null) this.pkIndices = pk.columns().map(columnIndex::get).collect(Collectors.toList());
     }
 
     public List<Record> getRecords() {
@@ -195,8 +193,7 @@ public class Snapshot {
 
         for (Map.Entry<List<String>, List<Snapshot.Record>> group : groups.entrySet()) {
             StringJoiner whereGrp = new StringJoiner(" and ");
-            if (where != null)
-                whereGrp.add(where);
+            if (where != null) whereGrp.add(where);
 
             IntStream.range(0, group.getKey().size()).mapToObj(i -> groupBy.get(i) + " = " + group.getKey().get(i)).forEach(whereGrp::add);
             StringJoiner filename = new StringJoiner("_", "", ".snapshot").add(getTable()).add(String.join("_", group.getKey()));
@@ -234,43 +231,34 @@ public class Snapshot {
         for (Record r : recs) {
             ObjectNode node = MAPPER.createObjectNode();
             for (int i = 0; i < columns.length; i++) {
-                if ("null".equals(r.columns[i]))
-                    node.put(columns[i], (String) null);
-                else {
-                    switch (this.columnTypes.get(columns[i]).type) {
-                        case BIT:
-                            node.put(columns[i], String.valueOf(r.columns[i]));
-                            break;
-                        case INTEGER:
-                        case TINYINT:
-                            node.put(columns[i], Integer.valueOf(r.columns[i]));
-                            break;
-                        case SMALLINT:
-                            node.put(columns[i], Short.valueOf(r.columns[i]));
-                            break;
-                        case BIGINT:
-                            node.put(columns[i], Long.valueOf(r.columns[i]));
-                            break;
-                        case FLOAT:
-                            node.put(columns[i], Float.valueOf(r.columns[i]));
-                            break;
-                        case REAL:
-                        case DOUBLE:
-                            node.put(columns[i], Double.valueOf(r.columns[i]));
-                            break;
-                        case NUMERIC:
-                            node.put(columns[i], Long.parseLong(r.columns[i]));
-                            break;
-                        case DECIMAL:
-                            node.put(columns[i], BigDecimal.valueOf(Long.parseLong(r.columns[i])));
-                            break;
-                        case NULL:
-                            node.put(columns[i], (String) null);
-                            break;
-                        default:
-                            node.put(columns[i], r.columns[i]);
-                            break;
-                    }
+                String value = r.columns[i];
+                switch (this.columnTypes.get(columns[i]).type) {
+                    case TINYINT:
+                    case INTEGER:
+                        node.put(columns[i], value == null ? null : Integer.valueOf(value));
+                        break;
+                    case SMALLINT:
+                        node.put(columns[i], value == null ? null : Short.valueOf(value));
+                        break;
+                    case BIGINT:
+                        node.put(columns[i], value == null ? null : Long.valueOf(value));
+                        break;
+                    case FLOAT:
+                        node.put(columns[i], value == null ? null : Float.valueOf(value));
+                        break;
+                    case NUMERIC:
+                    case REAL:
+                    case DOUBLE:
+                        node.put(columns[i], value == null ? null : Double.valueOf(value));
+                        break;
+                    case DECIMAL:
+                        node.put(columns[i], value == null ? null : BigDecimal.valueOf(Long.parseLong(value)));
+                        break;
+                    case BIT:
+                    case NULL:
+                    default:
+                        node.put(columns[i], value);
+                        break;
                 }
             }
             rows.add(node);

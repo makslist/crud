@@ -75,7 +75,7 @@ public class ChangeSet {
             output.user(String.format(recordFormatter, (Object[]) columnNames));
             updateKeys.forEach(k -> {
                 output.user(String.format(recordFormatter, (Object[]) reference.getRecord(k).columns().toArray(String[]::new)));
-                output.user((char) 27 + "[31m" + String.format(recordFormatter, (Object[]) target.getRecord(k).columns().toArray(String[]::new)));
+                output.user(String.format(recordFormatter, (Object[]) target.getRecord(k).columns().toArray(String[]::new)) + "\n");
             });
         }
     }

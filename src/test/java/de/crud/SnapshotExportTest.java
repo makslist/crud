@@ -48,7 +48,7 @@ public class SnapshotExportTest {
     void exportSnapshotPartition() {
         Snapshot rows = crud.fetch("tab");
         Assertions.assertEquals(4, rows.getRecords().size());
-        rows.export(Collections.singletonList("pk_char"), new File("./out/tmp/"));
+        rows.export(Collections.singletonList("pk_char"), new File("./"));
     }
 
 }
