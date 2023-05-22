@@ -11,25 +11,35 @@ public class Starter {
 
     private static class Config {
 
+        public static final String COMMAND_LINE_PARAMETER = new StringBuilder("Usage: crud [{-v,--verbose}] [{--vendor} vendor name]\n")
+            .append("          [{--hostname} url] [{--port} port number] [{--servicename} service name]\n")
+            .append("          [{--user} user name] [{--password} password] [{--commit} commit]\n")
+            .append("          [{-i, --import} path to reference file\n")
+            .append("          [{-f, --forceInsert} create table if necessary to insert]\n")
+            .append("          [{-d, --delta} path to reference file to show delta]]\n")
+            .append("          [{-e, --export} name of the table to export or compare]]\n")
+            .append("          [{--time} add a timestamp to the filename]]\n")
+            .append("          [{-w, --where} where statement]").toString();
+
         public static Config loadConfig() {
             Config config = new Config();
-            try (InputStream input = Files.newInputStream(Paths.get("src/main/resources/config.properties"))) {
+            try (InputStream input = Files.newInputStream(Paths.get("./config.properties"))) {
                 Properties prop = new Properties();
                 prop.load(input);
 
-                config.verbose = Boolean.parseBoolean(prop.getProperty("out.verbose", "false"));
+                config.verbose = Boolean.parseBoolean(prop.getProperty("verbose", "false"));
 
-                config.vendor = prop.getProperty("db.vendor", null);
-                config.hostname = prop.getProperty("db.hostname", null);
-                config.port = Integer.parseInt(prop.getProperty("db.port", "-1"));
-                config.servicename = prop.getProperty("db.servicename", null);
-                config.user = prop.getProperty("db.user", null);
-                config.password = prop.getProperty("db.password", null);
-                config.commit = Boolean.parseBoolean(prop.getProperty("db.commit", "false"));
+                config.vendor = prop.getProperty("vendor", null);
+                config.hostname = prop.getProperty("hostname", null);
+                config.port = Integer.parseInt(prop.getProperty("port", "-1"));
+                config.servicename = prop.getProperty("servicename", null);
+                config.user = prop.getProperty("user", null);
+                config.password = prop.getProperty("password", null);
+                config.commit = Boolean.parseBoolean(prop.getProperty("commit", "false"));
 
-                config.forceInsert = Boolean.parseBoolean(prop.getProperty("import.forceInsert", "false"));
-                config.ignoreColumns.addAll(Arrays.asList(prop.getProperty("import.ignoreColumns", "").split(",")));
-                config.exportTime = Boolean.parseBoolean(prop.getProperty("export.timestamp", "false"));
+                config.forceInsert = Boolean.parseBoolean(prop.getProperty("forceInsert", "false"));
+                config.ignoreColumns.addAll(Arrays.asList(prop.getProperty("ignoreColumns", "").split(",")));
+                config.exportTime = Boolean.parseBoolean(prop.getProperty("timestamp", "false"));
             } catch (IOException ex) {
                 return config;
             }
@@ -39,6 +49,7 @@ public class Starter {
         private static Config parseArgs(String[] args) {
             CmdLineParser parser = new CmdLineParser();
             CmdLineParser.Option<Boolean> verbose = parser.addBooleanOption('v', "verbose");
+            CmdLineParser.Option<Boolean> help = parser.addBooleanOption('h', "help");
 
             CmdLineParser.Option<String> vendor = parser.addStringOption("vendor");
 
@@ -53,28 +64,24 @@ public class Starter {
             CmdLineParser.Option<Boolean> forceInsert = parser.addBooleanOption('f', "forceInsert");
             CmdLineParser.Option<String> ignoreColumns = parser.addStringOption("ignoreColumns");
 
-            CmdLineParser.Option<String> exportTable = parser.addStringOption('t', "table");
+            CmdLineParser.Option<String> exportTable = parser.addStringOption('e', "export");
             CmdLineParser.Option<Boolean> exportTime = parser.addBooleanOption("timestamp");
             CmdLineParser.Option<String> exportWhere = parser.addStringOption('w', "where");
+
+            CmdLineParser.Option<String> showDeltaFor = parser.addStringOption('d', "delta");
 
             try {
                 parser.parse(args);
             } catch (CmdLineParser.OptionException e) {
                 System.err.println(e.getMessage());
-                System.err.println("Usage: crud [{-v,--verbose}] [{--vendor} vendor name]\n"
-                        + "[{--hostname} url] [{--port} port number] [{--servicename} service name]\n"
-                        + "[{--user} user name] [{--password} password] [{--commit} commit]\n"
-                        + "[{-i, --import} path to reference file\n"
-                        + "[{-f, --forceInsert} create table if necessary to insert]\n"
-                        + "[{-t, --table} name of the table to export or compare]]\n"
-                        + "[{--time} add a timestamp to the filename]]\n"
-                        + "[{-w, --where} where statement]");
+                System.err.println(COMMAND_LINE_PARAMETER);
                 System.exit(2);
             }
 
             Config config = new Config();
 
             config.verbose = parser.getOptionValue(verbose, false);
+            config.help = parser.getOptionValue(help, false);
 
             config.vendor = parser.getOptionValue(vendor, null);
 
@@ -93,11 +100,14 @@ public class Starter {
             config.exportTime = parser.getOptionValue(exportTime, false);
             config.exportWhere = parser.getOptionValue(exportWhere, null);
 
+            config.showDeltaFor = parser.getOptionValue(showDeltaFor, null);
+
             return config;
         }
 
         private Config merge(Config config) {
             verbose = verbose || config.verbose;
+            help = help || config.help;
 
             vendor = vendor != null ? vendor : config.vendor;
             hostname = hostname != null ? hostname : config.hostname;
@@ -110,16 +120,19 @@ public class Starter {
             importFile = importFile != null ? importFile : config.importFile;
             forceInsert |= config.forceInsert;
             config.ignoreColumns.forEach(c -> {
-                if (ignoreColumns.contains(c))
-                    ignoreColumns.add(c);
+                if (ignoreColumns.contains(c)) ignoreColumns.add(c);
             });
             exportTable = exportTable != null ? exportTable : config.exportTable;
             exportTime |= config.exportTime;
             exportWhere = exportWhere != null ? exportWhere : config.exportWhere;
+
+            showDeltaFor = showDeltaFor != null ? showDeltaFor : config.showDeltaFor;
+
             return this;
         }
 
         boolean verbose;
+        boolean help;
 
         String vendor;
 
@@ -137,6 +150,8 @@ public class Starter {
         boolean exportTime;
         String exportWhere;
 
+        String showDeltaFor;
+
     }
 
     private static final SimpleDateFormat exportDateFormat = new SimpleDateFormat("yyyyMMdd_HHmm");
@@ -148,6 +163,13 @@ public class Starter {
         if (config.verbose) output = OutPut.create(OutPut.Level.INFO);
         else output = OutPut.create(OutPut.Level.USER);
 
+        if (config.help) output.user(Config.COMMAND_LINE_PARAMETER);
+
+        if (config.vendor == null) {
+            output.error("No vendor given!");
+            output.error(Config.COMMAND_LINE_PARAMETER);
+            System.exit(2);
+        }
         Crud crud;
         switch (config.vendor) {
             case "oracle":
@@ -166,11 +188,17 @@ public class Starter {
                 throw new IllegalStateException("Unexpected value: " + config.vendor);
         }
 
-        if (config.exportTable != null) {
+        if (config.showDeltaFor != null) {
+            Snapshot reference = Snapshot.read(new File(config.showDeltaFor));
+            Snapshot after = crud.fetch(reference.getTable(), reference.getWhere());
+            ChangeSet change = reference.delta(after);
+            change.displayDiff();
+        } else if (config.exportTable != null) {
             Snapshot snapshot = crud.fetch(config.exportTable, config.exportWhere);
             try {
-                String filename = "./" + config.exportTable + (config.exportTime ? "_" + exportDateFormat.format(new Date()) : "") + ".snapshot";
+                String filename = "." + File.separator + config.exportTable + (config.exportTime ? "_" + exportDateFormat.format(new Date()) : "") + ".snapshot";
                 snapshot.export(new FileOutputStream(filename));
+                output.user("Exported table \"" + config.exportTable + "\" to file " + filename);
             } catch (FileNotFoundException e) {
                 throw new RuntimeException("File not found!");
             }

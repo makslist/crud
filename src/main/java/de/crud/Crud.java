@@ -134,10 +134,7 @@ public class Crud {
             return stmt.execute();
         } catch (SQLException e) {
             try {
-                String sql = "create table " + snapshot.getTable() + " ("
-                        + snapshot.columns().map(c -> c + " "
-                        + (snapshot.getColumnTypes().get(c).getSql())).collect(Collectors.joining(", "))
-                        + ", primary key (" + snapshot.pkColumns().collect(Collectors.joining(", ")) + "))";
+                String sql = "create table " + snapshot.getTable() + " (" + snapshot.columns().map(c -> c + " " + (snapshot.getColumnTypes().get(c).getSql())).collect(Collectors.joining(", ")) + ", primary key (" + snapshot.pkColumns().collect(Collectors.joining(", ")) + "))";
                 return conn.prepareStatement(sql).execute();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
@@ -195,14 +192,16 @@ public class Crud {
                             record[i - 1] = null;
                             break;
                         case DATE:
-                            record[i - 1] = SQL_DATE_FORMAT.format(rs.getDate(i));
+                            java.sql.Date date = rs.getDate(i);
+                            record[i - 1] = date == null ? null : SQL_DATE_FORMAT.format(date);
                             break;
                         case TIME:
-                            record[i - 1] = rs.getTime(i).toLocalTime().toString();
+                            Time time = rs.getTime(i);
+                            record[i - 1] = time == null ? null : time.toLocalTime().toString();
                             break;
                         case TIMESTAMP:
-                            record[i - 1] =
-                                    new SimpleDateFormat("yyyyMMdd").format(new Date(rs.getTimestamp(i).getTime()));
+                            Timestamp timestamp = rs.getTimestamp(i);
+                            record[i - 1] = timestamp == null ? null : new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date(timestamp.getTime()));
                             break;
                         case TIME_WITH_TIMEZONE:
                         case TIMESTAMP_WITH_TIMEZONE:
@@ -212,10 +211,11 @@ public class Crud {
                         case NCLOB:
                         case CLOB:
                             Clob clob = rs.getClob(i);
-                            record[i - 1] = clob.getSubString(1, (int) clob.length());
+                            record[i - 1] = clob == null ? null : clob.getSubString(1, (int) clob.length());
                             break;
                         case BLOB:
-                            record[i - 1] = new String(Base64.getEncoder().encode(rs.getBlob(i).getBytes(0L, (int) rs.getBlob(i).length())));
+                            Blob blob = rs.getBlob(i);
+                            record[i - 1] = blob == null ? null : new String(Base64.getEncoder().encode(blob.getBytes(0L, (int) blob.length())));
                             break;
                         default:
                             record[i - 1] = rs.getString(i);
@@ -234,8 +234,7 @@ public class Crud {
         changes.applyInsert(conn);
         changes.applyUpdate(conn);
         changes.applyDelete(conn);
-        if (commit)
-            execute("commit;");
+        if (commit) execute("commit;");
 
         for (String undoStmt : changes.sqlUndoStmt())
             output.user(undoStmt);
