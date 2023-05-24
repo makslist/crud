@@ -45,7 +45,7 @@ public class Crud {
 
     public static Crud connectH2() {
         try {
-            return new Crud("sa", DriverManager.getConnection("jdbc:h2:mem:myDb;DB_CLOSE_DELAY=-1", "sa", "sa"));
+            return new Crud("sa", DriverManager.getConnection("jdbc:h2:mem:myDb;DB_CLOSE_DELAY=-1;NON_KEYWORDS=KEY,VALUE", "sa", "sa"));
         } catch (SQLException e) {
             output.error("Connection unsuccessful: " + e.getMessage());
             System.exit(1);
@@ -201,7 +201,7 @@ public class Crud {
                             break;
                         case TIMESTAMP:
                             Timestamp timestamp = rs.getTimestamp(i);
-                            record[i - 1] = timestamp == null ? null : new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.ff").format(new Date(timestamp.getTime()));
+                            record[i - 1] = timestamp == null ? null : new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SS").format(new Date(timestamp.getTime()));
                             break;
                         case TIME_WITH_TIMEZONE:
                         case TIMESTAMP_WITH_TIMEZONE:

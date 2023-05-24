@@ -169,37 +169,37 @@ public class ChangeSet {
     private void bindVar(PreparedStatement stmt, int type, int index, String value) throws SQLException {
         switch (type) {
             case SMALLINT:
-                stmt.setShort(index, Short.parseShort(value));
+                stmt.setShort(index, value != null ? Short.parseShort(value) : null);
                 break;
             case TINYINT:
             case INTEGER:
-                stmt.setInt(index, Integer.parseInt(value));
+                stmt.setInt(index, value != null ? Integer.parseInt(value) : null);
                 break;
             case BIGINT:
-                stmt.setLong(index, Long.parseLong(value));
+                stmt.setLong(index, value != null ? Long.parseLong(value) : null);
                 break;
             case NUMERIC:
             case DECIMAL:
-                stmt.setBigDecimal(index, new BigDecimal(value));
+                stmt.setBigDecimal(index, value != null ? BigDecimal.valueOf(Double.parseDouble(value)) : null);
                 break;
             case FLOAT:
-                stmt.setFloat(index, Float.parseFloat(value));
+                stmt.setFloat(index, value != null ? Float.parseFloat(value) : null);
                 break;
             case REAL:
             case DOUBLE:
-                stmt.setDouble(index, Double.parseDouble(value));
+                stmt.setDouble(index, value != null ? Double.parseDouble(value) : null);
                 break;
             case BOOLEAN:
-                stmt.setBoolean(index, Boolean.parseBoolean(value));
+                stmt.setBoolean(index, value != null ? Boolean.parseBoolean(value) : null);
                 break;
             case DATE:
-                stmt.setDate(index, java.sql.Date.valueOf(value));
+                stmt.setDate(index, value != null ? java.sql.Date.valueOf(value) : null);
                 break;
             case TIME:
-                stmt.setTime(index, Time.valueOf(value));
+                stmt.setTime(index, value != null ? Time.valueOf(value) : null);
                 break;
             case TIMESTAMP:
-                stmt.setTimestamp(index, Timestamp.valueOf(value));
+                stmt.setTimestamp(index, value != null ? Timestamp.valueOf(value) : null);
                 break;
             case TIME_WITH_TIMEZONE:
             case TIMESTAMP_WITH_TIMEZONE:
@@ -213,10 +213,10 @@ public class ChangeSet {
             case VARBINARY:
             case NCLOB:
             case CLOB:
-                stmt.setClob(index, new SerialClob(value.toCharArray()));
+                stmt.setClob(index, value != null ? new SerialClob(value.toCharArray()) : null);
                 break;
             case BLOB:
-                stmt.setBlob(index, new SerialBlob(Base64.getDecoder().decode(value.getBytes())));
+                stmt.setBlob(index, value != null ? new SerialBlob(Base64.getDecoder().decode(value.getBytes())) : null);
                 break;
             default:
                 stmt.setString(index, value);
@@ -244,7 +244,7 @@ public class ChangeSet {
         String sql = "delete " + snpSht.getTable();
         List<String> stmts = new ArrayList<>();
         for (Snapshot.Record rec : records) {
-            String delete = sql + snpSht.getPk().columns().map(c -> c + " = " + rec.column(c)).collect(Collectors.joining(" and ", " where ", "")) + ";";
+            String delete = sql + snpSht.getPk().columns().map(c -> c + " = " + formatSqlDataType(rec.columnType(c), rec.column(c))).collect(Collectors.joining(" and ", " where ", "")) + ";";
             stmts.add(delete);
         }
         return stmts;
