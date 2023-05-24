@@ -199,6 +199,8 @@ public class ChangeSet {
                 stmt.setTime(index, Time.valueOf(value));
                 break;
             case TIMESTAMP:
+                stmt.setTimestamp(index, Timestamp.valueOf(value));
+                break;
             case TIME_WITH_TIMEZONE:
             case TIMESTAMP_WITH_TIMEZONE:
             case BINARY:

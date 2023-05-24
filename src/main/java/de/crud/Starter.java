@@ -11,15 +11,15 @@ public class Starter {
 
     private static class Config {
 
-        public static final String COMMAND_LINE_PARAMETER = new StringBuilder("Usage: crud [{-v,--verbose}] [{--vendor} vendor name]\n")
-            .append("          [{--hostname} url] [{--port} port number] [{--servicename} service name]\n")
-            .append("          [{--user} user name] [{--password} password] [{--commit} commit]\n")
-            .append("          [{-i, --import} path to reference file\n")
-            .append("          [{-f, --forceInsert} create table if necessary to insert]\n")
-            .append("          [{-d, --delta} path to reference file to show delta]]\n")
-            .append("          [{-e, --export} name of the table to export or compare]]\n")
-            .append("          [{--time} add a timestamp to the filename]]\n")
-            .append("          [{-w, --where} where statement]").toString();
+        public static final String COMMAND_LINE_PARAMETER = "Usage: crud [{-v,--verbose}] [{--vendor} vendor name]\n" +
+                "          [{--hostname} url] [{--port} port number] [{--servicename} service name]\n" +
+                "          [{--user} user name] [{--password} password] [{--commit} commit]\n" +
+                "          [{-i, --import} path to reference file\n" +
+                "          [{-f, --forceInsert} create table if necessary to insert]\n" +
+                "          [{-d, --delta} path to reference file to show delta]]\n" +
+                "          [{-e, --export} name of the table to export or compare]]\n" +
+                "          [{--time} add a timestamp to the filename]]\n" +
+                "          [{-w, --where} where statement]";
 
         public static Config loadConfig() {
             Config config = new Config();

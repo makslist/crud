@@ -201,7 +201,7 @@ public class Crud {
                             break;
                         case TIMESTAMP:
                             Timestamp timestamp = rs.getTimestamp(i);
-                            record[i - 1] = timestamp == null ? null : new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date(timestamp.getTime()));
+                            record[i - 1] = timestamp == null ? null : new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.ff").format(new Date(timestamp.getTime()));
                             break;
                         case TIME_WITH_TIMEZONE:
                         case TIMESTAMP_WITH_TIMEZONE:
@@ -236,6 +236,8 @@ public class Crud {
         changes.applyDelete(conn);
         if (commit) execute("commit;");
 
+        if (!changes.isEmpty())
+            output.user("Undo logs:");
         for (String undoStmt : changes.sqlUndoStmt())
             output.user(undoStmt);
     }
