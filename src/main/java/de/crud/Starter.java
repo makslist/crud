@@ -196,7 +196,7 @@ public class Starter {
         } else if (config.exportTable != null) {
             Snapshot snapshot = crud.fetch(config.exportTable, config.exportWhere);
             try {
-                String filename = "." + File.separator + config.exportTable + (config.exportTime ? "_" + exportDateFormat.format(new Date()) : "") + ".snapshot";
+                String filename = "." + File.separator + config.exportTable.toLowerCase() + (config.exportTime ? "_" + exportDateFormat.format(new Date()) : "") + ".snapshot";
                 snapshot.export(new FileOutputStream(filename));
                 output.user("Exported table \"" + config.exportTable + "\" to file " + filename);
             } catch (FileNotFoundException e) {

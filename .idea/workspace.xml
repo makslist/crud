@@ -4,123 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="a153ea6a-7811-47a3-9c0e-a6ea4b8b3e06" name="Changes" comment="Restructuring">
-      <change afterPath="$PROJECT_DIR$/.idea/codeStyles/Project.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/codeStyles/codeStyleConfig.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/data/tutorial.log" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/data/tutorial.properties" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/data/tutorial.script" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten.sql" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_ACKERMAN.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_ARA.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_BEE.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_BOEYER.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_BOTT.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_BRD.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_BTT.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_CFITZNER.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_CL.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_DEPLOY.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_DUR.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_FEM.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_FRO.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_GEBHARDT.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_GK.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_GLC.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_HELAS.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_HIA.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_INSTALL.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_JFR.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_JH.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_JW.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_JWE.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_KA.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_KAF.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_KATHRIN.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_KOK.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_KOS.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_KUA.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_KUE.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_LOS.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_Lieck.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_MJANSSON.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_MK.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_MLB.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_MLBE.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_MM.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_MPETERS.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_MZ.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_NBO.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_Osipovic.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_PAR.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_PH.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_PVC.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_PVC_NK.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_RD.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_ROC.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_ROC2.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_RW.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_RWINTER.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_SAL.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_SALHB4.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_SBJ.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_SCC.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_SCHUMA.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_SCM.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_SD.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_SHARTMAN.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_SOB.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_SY.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_TC.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_TEU.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_TH.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_TH_EN.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_TIE_EN.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_TUT.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_WEC_SP1.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_WEC_US1.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_WED.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_WEM.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/konstanten_ZM.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/laeger.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/stati.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/stati.sql" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/strat.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/strat.sql" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/stratpara.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/stratpara.sql" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/tab_111.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/tab_222.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/werte.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/werte.sql" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/zuweis.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/zuweis.sql" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/zuweisinfo.snapshot" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/zuweisinfo.sql" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/config.properties" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/test/java/de/crud/DiffReferenceToDbTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/test/java/de/crud/InsertWithCreateTableTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/test/java/de/crud/io/ExportTableTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test.snapshot" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/h2database_h2.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/ojdbc11.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/ojdbc8.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/de/crud/ChangeSet.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/de/crud/ChangeSet.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/de/crud/Crud.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/de/crud/Crud.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/de/crud/OutPut.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/de/crud/OutPut.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/de/crud/Snapshot.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/de/crud/Snapshot.java" afterDir="false" />
+    <list default="true" id="a153ea6a-7811-47a3-9c0e-a6ea4b8b3e06" name="Changes" comment="Fix: Handling of null values">
+      <change afterPath="$PROJECT_DIR$/amp_pbp_auftraege.snapshot" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/artikel.snapshot" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/config.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/de/crud/Starter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/de/crud/Starter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/de/crud/ApplyChangesTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/de/crud/ApplyChangesTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/de/crud/ConsoleDisplayDiffTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/de/crud/ConsoleDisplayDiffTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/de/crud/ExecutingPlainSqlStatementTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/de/crud/ExecutingPlainSqlStatementTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/de/crud/ExportDataTypesTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/de/crud/ExportDataTypesTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/de/crud/FormattedTypesInSqlTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/de/crud/FormattedTypesInSqlTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/de/crud/SnapshotExportTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/de/crud/SnapshotExportTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/de/crud/io/ReadFileTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/de/crud/io/ReadFileTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test.snapshot" beforeDir="false" afterPath="$PROJECT_DIR$/test.snapshot" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -138,6 +28,19 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">
+    <option name="selectedUrlAndAccountId">
+      <UrlAndAccount>
+        <option name="accountId" value="232b856a-c4ed-42c5-802a-284f70668c1f" />
+        <option name="url" value="https://github.com/makslist/crud.git" />
+      </UrlAndAccount>
+    </option>
+  </component>
   <component name="HighlightingSettingsPerFile">
     <setting file="file://$PROJECT_DIR$/src/main/java/Crud.java" root0="SKIP_INSPECTION" />
   </component>
@@ -152,24 +55,24 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ASKED_ADD_EXTERNAL_FILES": "true",
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "com.intellij.testIntegration.createTest.CreateTestDialog.defaultLibrary": "JUnit5",
-    "com.intellij.testIntegration.createTest.CreateTestDialog.defaultLibrarySuperClass.JUnit5": "",
-    "git-widget-placeholder": "main",
-    "last_directory_selection": "/home/maks/IdeaProjects/crud/src/main/java/de/crud/io",
-    "last_opened_file_path": "/home/maks/IdeaProjects/crud/out/artifacts",
-    "project.structure.last.edited": "Modules",
-    "project.structure.proportion": "0.13590033",
-    "project.structure.side.proportion": "0.2642623",
-    "run.code.analysis.last.selected.profile": "pProject Default",
-    "settings.editor.selected.configurable": "reference.projectsettings.compiler.javacompiler"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ASKED_ADD_EXTERNAL_FILES&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;com.intellij.testIntegration.createTest.CreateTestDialog.defaultLibrary&quot;: &quot;JUnit5&quot;,
+    &quot;com.intellij.testIntegration.createTest.CreateTestDialog.defaultLibrarySuperClass.JUnit5&quot;: &quot;&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;last_directory_selection&quot;: &quot;/home/maks/IdeaProjects/crud/src/main/java/de/crud/io&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/maks/IdeaProjects/crud/out/artifacts&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.13590033&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.2642623&quot;,
+    &quot;run.code.analysis.last.selected.profile&quot;: &quot;pProject Default&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;project.propCompiler&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CreateClassDialog.RecentsKey">
       <recent name="de.crud" />
@@ -188,7 +91,21 @@
       <recent name="de.crud" />
     </key>
   </component>
-  <component name="RunManager" selected="JUnit.All in crud">
+  <component name="RunManager" selected="Application.Starter">
+    <configuration name="Starter" type="Application" factoryName="Application" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="de.crud.Starter" />
+      <module name="crud" />
+      <option name="PROGRAM_PARAMETERS" value="-e amp_pbp_auftraege" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="de.crud.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
     <configuration name="All in crud" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
       <module name="crud" />
       <option name="PACKAGE_NAME" value="" />
@@ -212,22 +129,6 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="FormattedTypesInSqlTest.insertLob" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
-      <module name="crud" />
-      <extension name="coverage">
-        <pattern>
-          <option name="PATTERN" value="de.crud.*" />
-          <option name="ENABLED" value="true" />
-        </pattern>
-      </extension>
-      <option name="PACKAGE_NAME" value="de.crud" />
-      <option name="MAIN_CLASS_NAME" value="de.crud.FormattedTypesInSqlTest" />
-      <option name="METHOD_NAME" value="insertLob" />
-      <option name="TEST_OBJECT" value="method" />
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
     <configuration name="InsertWithCreateTableTest" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
       <module name="crud" />
       <extension name="coverage">
@@ -239,6 +140,23 @@
       <option name="PACKAGE_NAME" value="de.crud" />
       <option name="MAIN_CLASS_NAME" value="de.crud.InsertWithCreateTableTest" />
       <option name="TEST_OBJECT" value="class" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="SnapshotExportTest.exportSnapshotPartition" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="crud" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="de.crud.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="de.crud" />
+      <option name="MAIN_CLASS_NAME" value="de.crud.SnapshotExportTest" />
+      <option name="METHOD_NAME" value="exportSnapshotPartition" />
+      <option name="TEST_OBJECT" value="method" />
+      <dir value="$PROJECT_DIR$/src/test/java" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
@@ -264,11 +182,11 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="JUnit.All in crud" />
+        <item itemvalue="JUnit.SnapshotExportTest.exportSnapshotPartition" />
         <item itemvalue="JUnit.java in crud" />
+        <item itemvalue="JUnit.All in crud" />
         <item itemvalue="JUnit.InsertWithCreateTableTest" />
         <item itemvalue="JUnit.ExportDataTypesTest" />
-        <item itemvalue="JUnit.FormattedTypesInSqlTest.insertLob" />
       </list>
     </recent_temporary>
   </component>
@@ -288,7 +206,28 @@
       <option name="project" value="LOCAL" />
       <updated>1684277212631</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="Handling of nullable fields; enhanced parameter handling">
+      <created>1684745572098</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1684745572098</updated>
+    </task>
+    <task id="LOCAL-00003" summary="Handling of numeric value">
+      <created>1684774476152</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1684774476152</updated>
+    </task>
+    <task id="LOCAL-00004" summary="Fix: Handling of null values">
+      <created>1685002893918</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1685002893918</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="UnknownFeatures">
@@ -308,23 +247,46 @@
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
     <MESSAGE value="Restructuring" />
-    <option name="LAST_COMMIT_MESSAGE" value="Restructuring" />
+    <MESSAGE value="Handling of nullable fields; enhanced parameter handling" />
+    <MESSAGE value="Handling of numeric value" />
+    <MESSAGE value="Fix: Handling of null values" />
+    <option name="LAST_COMMIT_MESSAGE" value="Fix: Handling of null values" />
   </component>
   <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/src/test/java/de/crud/SnapshotExportTest.java</url>
+          <line>50</line>
+          <option name="timeStamp" value="8" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/src/main/java/de/crud/Crud.java</url>
+          <line>104</line>
+          <option name="timeStamp" value="16" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
     <pin-to-top-manager>
       <pinned-members>
+        <PinnedItemInfo parentTag="de.crud.Snapshot" memberName="pkIndices" />
         <PinnedItemInfo parentTag="de.crud.io.TableEntries" memberName="extractKey" />
       </pinned-members>
     </pin-to-top-manager>
+    <watches-manager>
+      <configuration name="Application">
+        <watch expression="comp.columns[11]" />
+      </configuration>
+    </watches-manager>
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />
     <select />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/cr_u_d$TableExportTest_fetchOneRow.ic" NAME="TableExportTest.fetchOneRow Coverage Results" MODIFIED="1682204778116" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="idea" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" />
     <SUITE FILE_PATH="coverage/cr_u_d$TableExportTest__1_.ic" NAME="TableExportTest (1) Coverage Results" MODIFIED="1682445971562" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="idea" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false">
       <FILTER>de.crud.*</FILTER>
     </SUITE>
+    <SUITE FILE_PATH="coverage/cr_u_d$TableExportTest_fetchOneRow.ic" NAME="TableExportTest.fetchOneRow Coverage Results" MODIFIED="1682204778116" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="idea" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" />
   </component>
 </project>
