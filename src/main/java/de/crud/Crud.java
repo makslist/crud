@@ -100,18 +100,22 @@ public class Crud {
 
     public List<String> descPkOf(String table) {
         try {
-            ResultSet rsPk = conn.getMetaData().getPrimaryKeys(null, null, table.toUpperCase());
             boolean isMixedCase = conn.getMetaData().storesMixedCaseIdentifiers();
+            ResultSet rsPk = conn.getMetaData().getPrimaryKeys(null, user.toUpperCase(), isMixedCase ? table : table.toUpperCase());
             List<String> pkColumns = new ArrayList<>();
             while (rsPk.next()) {
-                String schema = rsPk.getString("TABLE_SCHEM");
-                if (user.equalsIgnoreCase(schema)) {
-                    String columnName = rsPk.getString("COLUMN_NAME");
-                    pkColumns.add(isMixedCase ? columnName : columnName.toLowerCase());
-                } else if ("PUBLIC".equalsIgnoreCase(schema)) {
-                    String columnName = rsPk.getString("COLUMN_NAME");
-                    pkColumns.add(isMixedCase ? columnName : columnName.toLowerCase());
-                }
+                String columnName = rsPk.getString("COLUMN_NAME");
+                pkColumns.add(isMixedCase ? columnName : columnName.toLowerCase());
+            }
+            if (!pkColumns.isEmpty())
+                return pkColumns;
+
+            rsPk = conn.getMetaData().getPrimaryKeys(null, null, isMixedCase ? table : table.toUpperCase());
+            String schema = null;
+            while (rsPk.next() && (schema == null || schema.equals(rsPk.getString("TABLE_SCHEM")))) {
+                schema = rsPk.getString("TABLE_SCHEM");
+                String columnName = rsPk.getString("COLUMN_NAME");
+                pkColumns.add(isMixedCase ? columnName : columnName.toLowerCase());
             }
             return pkColumns;
         } catch (SQLException e) {
