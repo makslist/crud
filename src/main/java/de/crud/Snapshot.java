@@ -235,24 +235,24 @@ public class Snapshot {
                 switch (this.columnTypes.get(columns[i]).type) {
                     case TINYINT:
                     case INTEGER:
-                        node.put(columns[i], value == null ? null : Integer.valueOf(value));
+                        node.put(columns[i], value != null ? Integer.valueOf(value) : null);
                         break;
                     case SMALLINT:
-                        node.put(columns[i], value == null ? null : Short.valueOf(value));
+                        node.put(columns[i], value != null ? Short.valueOf(value) : null);
                         break;
                     case BIGINT:
-                        node.put(columns[i], value == null ? null : Long.valueOf(value));
+                        node.put(columns[i], value != null ? Long.valueOf(value) : null);
                         break;
                     case FLOAT:
-                        node.put(columns[i], value == null ? null : Float.valueOf(value));
+                        node.put(columns[i], value != null ? Float.valueOf(value) : null);
                         break;
                     case NUMERIC:
                     case REAL:
                     case DOUBLE:
-                        node.put(columns[i], value == null ? null : Double.valueOf(value));
+                        node.put(columns[i], value != null ? Double.valueOf(value) : null);
                         break;
                     case DECIMAL:
-                        node.put(columns[i], value == null ? null : BigDecimal.valueOf(Long.parseLong(value)));
+                        node.put(columns[i], value != null ? BigDecimal.valueOf(Long.parseLong(value)) : null);
                         break;
                     case BIT:
                     case NULL:

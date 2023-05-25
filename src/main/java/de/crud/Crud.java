@@ -3,6 +3,7 @@ package de.crud;
 import oracle.jdbc.pool.*;
 
 import java.io.*;
+import java.math.*;
 import java.sql.*;
 import java.text.*;
 import java.util.Date;
@@ -100,18 +101,18 @@ public class Crud {
 
     public List<String> descPkOf(String table) {
         try {
-            ResultSet rsPk = conn.getMetaData().getPrimaryKeys(null, null, table.toUpperCase());
             boolean isMixedCase = conn.getMetaData().storesMixedCaseIdentifiers();
+            ResultSet rsPk = conn.getMetaData().getPrimaryKeys(null, isMixedCase ? user : user.toUpperCase(), table.toUpperCase());
             List<String> pkColumns = new ArrayList<>();
+            String tabSchema = null;
             while (rsPk.next()) {
                 String schema = rsPk.getString("TABLE_SCHEM");
-                if (user.equalsIgnoreCase(schema)) {
-                    String columnName = rsPk.getString("COLUMN_NAME");
-                    pkColumns.add(isMixedCase ? columnName : columnName.toLowerCase());
-                } else if ("PUBLIC".equalsIgnoreCase(schema)) {
-                    String columnName = rsPk.getString("COLUMN_NAME");
-                    pkColumns.add(isMixedCase ? columnName : columnName.toLowerCase());
-                }
+                if (tabSchema != null && tabSchema.equalsIgnoreCase(schema))
+                    continue;
+
+                String columnName = rsPk.getString("COLUMN_NAME");
+                pkColumns.add(isMixedCase ? columnName : columnName.toLowerCase());
+                tabSchema = schema;
             }
             return pkColumns;
         } catch (SQLException e) {
@@ -165,43 +166,50 @@ public class Crud {
                 for (int i = 1; i <= columnCount; i++) {
                     switch (rsmd.getColumnType(i)) {
                         case SMALLINT:
-                            record[i - 1] = String.valueOf(rs.getShort(i));
+                            short sho = rs.getShort(i);
+                            record[i - 1] = rs.wasNull() ? null : String.valueOf(sho);
                             break;
                         case TINYINT:
                         case INTEGER:
-                            record[i - 1] = String.valueOf(rs.getInt(i));
+                            int in = rs.getInt(i);
+                            record[i - 1] = rs.wasNull() ? null : String.valueOf(in);
                             break;
                         case BIGINT:
-                            record[i - 1] = String.valueOf(rs.getLong(i));
+                            long lon = rs.getLong(i);
+                            record[i - 1] = rs.wasNull() ? null : String.valueOf(lon);
                             break;
                         case NUMERIC:
                         case DECIMAL:
-                            record[i - 1] = String.valueOf(rs.getBigDecimal(i));
+                            BigDecimal bigDecimal = rs.getBigDecimal(i);
+                            record[i - 1] = rs.wasNull() ? null : String.valueOf(bigDecimal);
                             break;
                         case FLOAT:
-                            record[i - 1] = String.valueOf(rs.getFloat(i));
+                            float floa = rs.getFloat(i);
+                            record[i - 1] = rs.wasNull() ? null : String.valueOf(floa);
                             break;
                         case REAL:
                         case DOUBLE:
-                            record[i - 1] = String.valueOf(rs.getDouble(i));
+                            double doub = rs.getDouble(i);
+                            record[i - 1] = rs.wasNull() ? null : String.valueOf(doub);
                             break;
                         case BOOLEAN:
-                            record[i - 1] = String.valueOf(rs.getBoolean(i));
+                            boolean bool = rs.getBoolean(i);
+                            record[i - 1] = rs.wasNull() ? null : String.valueOf(bool);
                             break;
                         case NULL:
                             record[i - 1] = null;
                             break;
                         case DATE:
                             java.sql.Date date = rs.getDate(i);
-                            record[i - 1] = date == null ? null : SQL_DATE_FORMAT.format(date);
+                            record[i - 1] = rs.wasNull() ? null : SQL_DATE_FORMAT.format(date);
                             break;
                         case TIME:
                             Time time = rs.getTime(i);
-                            record[i - 1] = time == null ? null : time.toLocalTime().toString();
+                            record[i - 1] = rs.wasNull() ? null : time.toLocalTime().toString();
                             break;
                         case TIMESTAMP:
                             Timestamp timestamp = rs.getTimestamp(i);
-                            record[i - 1] = timestamp == null ? null : new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SS").format(new Date(timestamp.getTime()));
+                            record[i - 1] = rs.wasNull() ? null : new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SS").format(new Date(timestamp.getTime()));
                             break;
                         case TIME_WITH_TIMEZONE:
                         case TIMESTAMP_WITH_TIMEZONE:
@@ -211,14 +219,15 @@ public class Crud {
                         case NCLOB:
                         case CLOB:
                             Clob clob = rs.getClob(i);
-                            record[i - 1] = clob == null ? null : clob.getSubString(1, (int) clob.length());
+                            record[i - 1] = rs.wasNull() ? null : clob.getSubString(1, (int) clob.length());
                             break;
                         case BLOB:
                             Blob blob = rs.getBlob(i);
-                            record[i - 1] = blob == null ? null : new String(Base64.getEncoder().encode(blob.getBytes(0L, (int) blob.length())));
+                            record[i - 1] = rs.wasNull() ? null : new String(Base64.getEncoder().encode(blob.getBytes(0L, (int) blob.length())));
                             break;
                         default:
-                            record[i - 1] = rs.getString(i);
+                            String string = rs.getString(i);
+                            record[i - 1] = rs.wasNull() ? null : string;
                             break;
                     }
                 }
