@@ -11,15 +11,15 @@ public class Starter {
 
     private static class Config {
 
-        public static final String COMMAND_LINE_PARAMETER = "Usage: crud [{-v,--verbose}] [{--vendor} vendor name]\n" +
-                "          [{--hostname} url] [{--port} port number] [{--servicename} service name]\n" +
-                "          [{--user} user name] [{--password} password] [{--commit} commit]\n" +
-                "          [{-i, --import} path to reference file\n" +
-                "          [{-f, --forceInsert} create table if necessary to insert]\n" +
-                "          [{-d, --delta} path to reference file to show delta]]\n" +
-                "          [{-e, --export} name of the table to export or compare]]\n" +
-                "          [{--time} add a timestamp to the filename]]\n" +
-                "          [{-w, --where} where statement]";
+        public static final String COMMAND_LINE_PARAMETER = "Usage: dbd [{-v,--verbose}] [{--vendor} vendor name]\n" +
+                "           [{--hostname} url] [{--port} port number] [{--servicename} service name]\n" +
+                "           [{--user} user name] [{--password} password] [{--commit} commit]\n" +
+                "           [{-i, --import} path to reference file\n" +
+                "           [{-f, --forceInsert} create table if necessary to insert]\n" +
+                "           [{-d, --delta} path to reference file to show delta]]\n" +
+                "           [{-e, --export} name of the table to export or compare]]\n" +
+                "           [{--time} add a timestamp to the filename]]\n" +
+                "           [{-w, --where} where statement]";
 
         public static Config loadConfig() {
             Config config = new Config();
@@ -163,7 +163,16 @@ public class Starter {
         if (config.verbose) output = OutPut.create(OutPut.Level.INFO);
         else output = OutPut.create(OutPut.Level.USER);
 
-        if (config.help) output.user(Config.COMMAND_LINE_PARAMETER);
+        if (config.help) {
+            output.user("  _____  ____                 _ _        ");
+            output.user(" |  __ \\|  _ \\     /\\        | | |       ");
+            output.user(" | |  | | |_) |   /  \\    ___| | |_ __ _");
+            output.user(" | |  | |  _ <   / /\\ \\  / _ \\ | __/ _` |");
+            output.user(" | |__| | |_) | / /__\\ \\|  __/ | || (_| |");
+            output.user(" |_____/|____/ /________\\\\___|_|\\__\\__,_|");
+
+            output.user(Config.COMMAND_LINE_PARAMETER);
+        }
 
         if (config.vendor == null) {
             output.error("No vendor given!");

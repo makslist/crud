@@ -140,6 +140,8 @@ public class Crud {
         } catch (SQLException e) {
             try {
                 String sql = "create table " + snapshot.getTable() + " (" + snapshot.columns().map(c -> c + " " + (snapshot.getColumnTypes().get(c).getSql())).collect(Collectors.joining(", ")) + ", primary key (" + snapshot.pkColumns().collect(Collectors.joining(", ")) + "))";
+                output.user("Table does not exist. Creating:");
+                output.user(sql);
                 return conn.prepareStatement(sql).execute();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
@@ -185,7 +187,8 @@ public class Crud {
                         case NUMERIC:
                         case DECIMAL:
                             BigDecimal bigDecimal = rs.getBigDecimal(i);
-                            record[i - 1] = rs.wasNull() ? null : String.valueOf(bigDecimal);
+                            bigDecimal = bigDecimal.stripTrailingZeros();
+                            record[i - 1] = rs.wasNull() ? null : bigDecimal.toPlainString();
                             break;
                         case FLOAT:
                             float floa = rs.getFloat(i);
@@ -215,11 +218,6 @@ public class Crud {
                             Timestamp timestamp = rs.getTimestamp(i);
                             record[i - 1] = rs.wasNull() ? null : new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SS").format(new Date(timestamp.getTime()));
                             break;
-                        case TIME_WITH_TIMEZONE:
-                        case TIMESTAMP_WITH_TIMEZONE:
-                        case BINARY:
-                        case BIT:
-                            break;
                         case NCLOB:
                         case CLOB:
                             Clob clob = rs.getClob(i);
@@ -229,6 +227,12 @@ public class Crud {
                             Blob blob = rs.getBlob(i);
                             record[i - 1] = rs.wasNull() ? null : new String(Base64.getEncoder().encode(blob.getBytes(0L, (int) blob.length())));
                             break;
+                        case SQLXML:
+                            break;
+                        case TIME_WITH_TIMEZONE:
+                        case TIMESTAMP_WITH_TIMEZONE:
+                        case BINARY:
+                        case BIT:
                         default:
                             String string = rs.getString(i);
                             record[i - 1] = rs.wasNull() ? null : string;
@@ -244,8 +248,14 @@ public class Crud {
     }
 
     public void apply(ChangeSet changes, boolean commit) {
+        if (!changes.insertRecs().isEmpty())
+            output.user("Inserting " + changes.insertRecs().size() + " rows");
         changes.applyInsert(conn);
+        if (!changes.updateRecs().isEmpty())
+            output.user("Updating " + changes.updateRecs().size() + " rows");
         changes.applyUpdate(conn);
+        if (!changes.deleteRecs().isEmpty())
+            output.user("Deleting " + changes.deleteRecs().size() + " rows");
         changes.applyDelete(conn);
         if (commit) execute("commit;");
 

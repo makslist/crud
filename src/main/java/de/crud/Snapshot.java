@@ -56,17 +56,21 @@ public class Snapshot {
     public Snapshot(String table, String[] columns, Map<String, SqlType> columnTypes, List<String> pkColumns, String where) {
         this.table = table;
         this.columns = columns;
-        this.columnIndex = IntStream.rangeClosed(0, columns.length - 1).boxed().collect(Collectors.toMap(i -> columns[i], Function.identity()));
+        this.columnIndex = buildIndex(columns);
         this.columnTypes = columnTypes;
         this.pk = new Key(pkColumns);
         this.pkIndices = pkColumns.stream().map(columnIndex::get).collect(Collectors.toList());
         this.where = where;
     }
 
+    private static Map<String, Integer> buildIndex(String[] columns) {
+        return IntStream.rangeClosed(0, columns.length - 1).boxed().collect(Collectors.toMap(i -> columns[i], Function.identity()));
+    }
+
     @JsonProperty(COLUMNS)
     public void setColumns(String[] columns) {
         this.columns = columns;
-        this.columnIndex = IntStream.rangeClosed(0, columns.length - 1).boxed().collect(Collectors.toMap(i -> columns[i], Function.identity()));
+        this.columnIndex = buildIndex(columns);
         if (pk != null) this.pkIndices = pk.columns().map(columnIndex::get).collect(Collectors.toList());
     }
 
@@ -330,7 +334,7 @@ public class Snapshot {
                 case DOUBLE:
                     return "double";
                 case NUMERIC:
-                    return "numeric";
+                    return "numeric (" + precision + ")";
                 case DECIMAL:
                     return "decimal";
                 case CHAR:
@@ -422,7 +426,8 @@ public class Snapshot {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             Key key = (Key) o;
-            return Arrays.equals(columns, key.columns);
+            boolean equals = Arrays.equals(columns, key.columns);
+            return equals;
         }
 
         @Override
