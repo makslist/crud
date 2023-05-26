@@ -187,8 +187,11 @@ public class Crud {
                         case NUMERIC:
                         case DECIMAL:
                             BigDecimal bigDecimal = rs.getBigDecimal(i);
-                            bigDecimal = bigDecimal.stripTrailingZeros();
-                            record[i - 1] = rs.wasNull() ? null : bigDecimal.toPlainString();
+                            if (!rs.wasNull()) {
+                                bigDecimal = bigDecimal.stripTrailingZeros();
+                                record[i - 1] = rs.wasNull() ? null : bigDecimal.toPlainString();
+                            } else
+                                record[i - 1] = null;
                             break;
                         case FLOAT:
                             float floa = rs.getFloat(i);

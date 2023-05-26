@@ -245,18 +245,18 @@ public class Snapshot {
                         node.put(columns[i], value != null ? Short.valueOf(value) : null);
                         break;
                     case BIGINT:
-                        node.put(columns[i], value != null ? Long.valueOf(value) : null);
+                        node.put(columns[i], value != null ? new BigInteger(value) : null);
+                        break;
+                    case NUMERIC:
+                    case DECIMAL:
+                        node.put(columns[i], value != null ? new BigDecimal(value) : null);
                         break;
                     case FLOAT:
                         node.put(columns[i], value != null ? Float.valueOf(value) : null);
                         break;
-                    case NUMERIC:
                     case REAL:
                     case DOUBLE:
                         node.put(columns[i], value != null ? Double.valueOf(value) : null);
-                        break;
-                    case DECIMAL:
-                        node.put(columns[i], value != null ? BigDecimal.valueOf(Long.parseLong(value)) : null);
                         break;
                     case BIT:
                     case NULL:
