@@ -4,22 +4,32 @@ import com.sanityinc.jargs.*;
 
 import java.io.*;
 import java.nio.file.*;
+import java.sql.*;
 import java.text.*;
+import java.util.Date;
 import java.util.*;
 
 public class Starter {
 
     private static class Config {
 
-        public static final String COMMAND_LINE_PARAMETER = "Usage: dbd [{-v,--verbose}] [{--vendor} vendor name]\n" +
+        private static final String COMMAND_LINE_PARAMETER = "Usage: dbd [{-v,--verbose}] [{--vendor} vendor name]\n" +
                 "           [{--hostname} url] [{--port} port number] [{--servicename} service name]\n" +
                 "           [{--user} user name] [{--password} password] [{--commit} commit]\n" +
                 "           [{-i, --import} path to reference file\n" +
                 "           [{-f, --forceInsert} create table if necessary to insert]\n" +
-                "           [{-d, --delta} path to reference file to show delta]]\n" +
-                "           [{-e, --export} name of the table to export or compare]]\n" +
+                "           [{-d, --delta} path to reference file to compare]]\n" +
+                "           [{-e, --export} name of the table to export]]\n" +
+                "           [{-a, --alltables} pattern or name of the tables to export]]\n" +
                 "           [{--time} add a timestamp to the filename]]\n" +
                 "           [{-w, --where} where statement]";
+
+        private static final String LOGO = "  _____  ____                 _ _\n" +
+                " |  __ \\|  _ \\     /\\        | | |\n" +
+                " | |  | | |_) |   /  \\    ___| | |_ __ _\n" +
+                " | |  | |  _ <   / /\\ \\  / _ \\ | __/ _`|\n" +
+                " | |__| | |_) | / /__\\ \\|  __/ | || (_| |\n" +
+                " |_____/|____/ /________\\\\___|_|\\__\\__,_|\n";
 
         public static Config loadConfig() {
             Config config = new Config();
@@ -65,6 +75,7 @@ public class Starter {
             CmdLineParser.Option<String> ignoreColumns = parser.addStringOption("ignoreColumns");
 
             CmdLineParser.Option<String> exportTable = parser.addStringOption('e', "export");
+            CmdLineParser.Option<String> exportAllTables = parser.addStringOption('a', "alltables");
             CmdLineParser.Option<Boolean> exportTime = parser.addBooleanOption("timestamp");
             CmdLineParser.Option<String> exportWhere = parser.addStringOption('w', "where");
 
@@ -79,7 +90,6 @@ public class Starter {
             }
 
             Config config = new Config();
-
             config.verbose = parser.getOptionValue(verbose, false);
             config.help = parser.getOptionValue(help, false);
 
@@ -97,6 +107,7 @@ public class Starter {
             config.ignoreColumns = new ArrayList<>(Arrays.asList(parser.getOptionValue(ignoreColumns, "").split(",")));
 
             config.exportTable = parser.getOptionValue(exportTable, null);
+            config.exportAllTables = parser.getOptionValue(exportAllTables, null);
             config.exportTime = parser.getOptionValue(exportTime, false);
             config.exportWhere = parser.getOptionValue(exportWhere, null);
 
@@ -123,6 +134,7 @@ public class Starter {
                 if (ignoreColumns.contains(c)) ignoreColumns.add(c);
             });
             exportTable = exportTable != null ? exportTable : config.exportTable;
+            exportAllTables = exportAllTables != null ? exportAllTables : config.exportAllTables;
             exportTime |= config.exportTime;
             exportWhere = exportWhere != null ? exportWhere : config.exportWhere;
 
@@ -147,6 +159,7 @@ public class Starter {
         boolean forceInsert;
         List<String> ignoreColumns = new ArrayList<>();
         String exportTable;
+        String exportAllTables;
         boolean exportTime;
         String exportWhere;
 
@@ -154,7 +167,7 @@ public class Starter {
 
     }
 
-    private static final SimpleDateFormat exportDateFormat = new SimpleDateFormat("yyyyMMdd_HHmm");
+    private static final SimpleDateFormat EXPORT_DATE_FORMAT = new SimpleDateFormat("yyyyMMdd_HHmm");
 
     public static void main(String[] args) {
         Config config = Config.parseArgs(args).merge(Config.loadConfig());
@@ -164,13 +177,7 @@ public class Starter {
         else output = OutPut.create(OutPut.Level.USER);
 
         if (config.help) {
-            output.user("  _____  ____                 _ _        ");
-            output.user(" |  __ \\|  _ \\     /\\        | | |       ");
-            output.user(" | |  | | |_) |   /  \\    ___| | |_ __ _");
-            output.user(" | |  | |  _ <   / /\\ \\  / _ \\ | __/ _` |");
-            output.user(" | |__| | |_) | / /__\\ \\|  __/ | || (_| |");
-            output.user(" |_____/|____/ /________\\\\___|_|\\__\\__,_|");
-
+            output.user(Config.LOGO);
             output.user(Config.COMMAND_LINE_PARAMETER);
         }
 
@@ -194,45 +201,96 @@ public class Starter {
                 crud = Crud.connectHSQL();
                 break;
             default:
-                throw new IllegalStateException("Unexpected value: " + config.vendor);
+                output.error("Unknown vendor: \"" + config.vendor + "\"");
+                System.exit(3);
+                return;
         }
 
         if (config.showDeltaFor != null) {
-            Snapshot reference = Snapshot.read(new File(config.showDeltaFor));
-            Snapshot after = crud.fetch(reference.getTable(), reference.getWhere());
-            ChangeSet change = reference.delta(after);
-            change.displayDiff();
-        } else if (config.exportTable != null) {
-            Snapshot snapshot = crud.fetch(config.exportTable, config.exportWhere);
             try {
-                String filename = "." + File.separator + config.exportTable.toLowerCase() + (config.exportTime ? "_" + exportDateFormat.format(new Date()) : "") + ".snapshot";
+                File file = new File(config.showDeltaFor);
+                if (!file.exists()) {
+                    output.error(file.getName() + " does not exists.");
+                    System.exit(2);
+                } else {
+                    Snapshot reference = Snapshot.read(file);
+                    Snapshot after = crud.fetch(reference.getTable(), reference.getWhere());
+                    ChangeSet change = reference.delta(after);
+                    change.displayDiff();
+                }
+            } catch (SQLException e) {
+                output.error(e.getMessage() + "\n" + e.getSQLState());
+                System.exit(2);
+            } catch (IOException e) {
+                output.error(e.getMessage());
+                System.exit(2);
+            }
+        } else if (config.exportTable != null) {
+            String filename = "." + File.separator + config.exportTable.toLowerCase() + (config.exportTime ? "_" + EXPORT_DATE_FORMAT.format(new Date()) : "") + ".snapshot";
+            try {
+                Snapshot snapshot = crud.fetch(config.exportTable, config.exportWhere);
                 snapshot.export(new FileOutputStream(filename));
                 output.user("Exported table \"" + config.exportTable + "\" to file " + filename);
             } catch (FileNotFoundException e) {
-                throw new RuntimeException("File not found!");
-            }
-        } else if (config.importFile != null) {
-            Snapshot reference = Snapshot.read(new File(config.importFile));
-            if (!reference.isEmpty() && config.forceInsert && crud.existsOrCreate(reference)) {
-                output.error("No data to import in file " + config.importFile);
+                output.error("File " + filename + " not found.");
+            } catch (SQLException e) {
+                output.error(e.getMessage() + "\n" + e.getSQLState());
+                System.exit(2);
+            } catch (IOException e) {
+                output.error(e.getMessage());
                 System.exit(2);
             }
-
-            ChangeSet change = crud.delta(reference, config.ignoreColumns);
-
-            if (!change.isEmpty()) {
-                change.displayDiff();
-                output.user("Apply diff to database? [Y/n]");
-                Scanner scanner = new Scanner(System.in);
-                String answer = scanner.nextLine();
-                if ("".equals(answer) || "Y".equalsIgnoreCase(answer)) {
-                    crud.apply(change, config.commit);
-
-                    output.user("-- Undo logs");
-                    for (String stmt : change.sqlUndoStmt())
-                        output.user(stmt);
+        } else if (config.exportAllTables != null) {
+            try {
+                for (String table : crud.tables(config.exportAllTables)) {
+                    String filename = "." + File.separator + table.toLowerCase() + (config.exportTime ? "_" + EXPORT_DATE_FORMAT.format(new Date()) : "") + ".snapshot";
+                    Snapshot snapshot = crud.fetch(config.exportTable, config.exportWhere);
+                    try {
+                        snapshot.export(new FileOutputStream(filename));
+                        output.user("Exported table \"" + config.exportTable + "\" to file " + filename);
+                    } catch (FileNotFoundException e) {
+                        output.error("File " + filename + " not found.");
+                    } catch (IOException e) {
+                        output.error(e.getMessage());
+                        System.exit(2);
+                    }
                 }
-            } else output.user("No differences found.");
+            } catch (SQLException e) {
+                output.error(e.getMessage() + "\n" + e.getSQLState());
+                System.exit(2);
+            }
+        } else if (config.importFile != null) {
+            try {
+                Snapshot reference = Snapshot.read(new File(config.importFile));
+                if (!reference.isEmpty() && config.forceInsert && crud.existsOrCreate(reference)) {
+                    output.error("No data to import in file " + config.importFile);
+                    System.exit(2);
+                }
+
+                ChangeSet change = crud.delta(reference, config.ignoreColumns);
+                if (!change.isEmpty()) {
+                    change.displayDiff();
+                    output.user("Apply diff to database? [Y/n]");
+                    Scanner scanner = new Scanner(System.in);
+                    String answer = scanner.nextLine();
+                    if ("".equals(answer) || "Y".equalsIgnoreCase(answer)) {
+                        crud.apply(change, config.commit);
+
+                        if (!change.isEmpty())
+                            output.user("-- Undo logs:");
+                        for (String stmt : change.sqlUndoStmt())
+                            output.user(stmt);
+                    }
+                } else output.user("No differences found.");
+            } catch (SQLException e) {
+                output.error(e.getMessage() + "\n" + e.getSQLState());
+                System.exit(2);
+            } catch (FileNotFoundException e) {
+                output.error("File " + config.importFile + " not found.");
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
         } else output.error("No usable parameters given!");
     }
 

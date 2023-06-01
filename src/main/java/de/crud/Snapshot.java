@@ -7,6 +7,8 @@ import com.fasterxml.jackson.databind.node.*;
 
 import java.io.*;
 import java.math.*;
+import java.nio.file.*;
+import java.text.*;
 import java.util.*;
 import java.util.function.*;
 import java.util.stream.*;
@@ -23,21 +25,22 @@ public class Snapshot {
     public static final String RECORDS = "records";
 
     private static final ObjectMapper MAPPER = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT).configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-    private static final ObjectWriter objectWriter;
+    private static final ObjectWriter OBJECT_WRITER;
+
+    private static final DecimalFormat DECIMAL_FORMAT;
 
     static {
         DefaultPrettyPrinter prettyPrinter = new DefaultPrettyPrinter();
         prettyPrinter.indentArraysWith(DefaultIndenter.SYSTEM_LINEFEED_INSTANCE);
-        objectWriter = MAPPER.writer(prettyPrinter);
+        OBJECT_WRITER = MAPPER.writer(prettyPrinter);
+
+        DECIMAL_FORMAT = new DecimalFormat("0", DecimalFormatSymbols.getInstance(Locale.ENGLISH));
+        DECIMAL_FORMAT.setMaximumFractionDigits(340);
     }
 
-    public static Snapshot read(File file) {
+    public static Snapshot read(File file) throws IOException {
         ObjectReader reader = MAPPER.reader();
-        try {
-            return reader.readValue(file, Snapshot.class);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        return reader.readValue(file, Snapshot.class);
     }
 
     private String table;
@@ -189,7 +192,7 @@ public class Snapshot {
         } else return null;
     }
 
-    public void export(List<String> groupBy, File path) {
+    public void export(List<String> groupBy, File path) throws IOException {
         if (!groupBy.stream().allMatch(g -> columns().anyMatch(g::equalsIgnoreCase)))
             throw new RuntimeException("Column does not exist in table.");
 
@@ -201,19 +204,15 @@ public class Snapshot {
 
             IntStream.range(0, group.getKey().size()).mapToObj(i -> groupBy.get(i) + " = " + group.getKey().get(i)).forEach(whereGrp::add);
             StringJoiner filename = new StringJoiner("_", "", ".snapshot").add(getTable()).add(String.join("_", group.getKey()));
-            try {
-                export(new FileOutputStream(new File(path, filename.toString())), whereGrp.toString(), group.getValue());
-            } catch (FileNotFoundException e) {
-                throw new RuntimeException(e);
-            }
+            export(Files.newOutputStream(new File(path, filename.toString()).toPath()), whereGrp.toString(), group.getValue());
         }
     }
 
-    public void export(OutputStream out) {
+    public void export(OutputStream out) throws IOException {
         export(out, where, records);
     }
 
-    private void export(OutputStream out, String whereStmt, List<Record> recs) {
+    private void export(OutputStream out, String whereStmt, List<Record> recs) throws IOException {
         ObjectNode root = MAPPER.createObjectNode();
         root.put(TABLE, this.table);
         columns().forEach(root.putArray(COLUMNS)::add);
@@ -249,7 +248,7 @@ public class Snapshot {
                         break;
                     case NUMERIC:
                     case DECIMAL:
-                        node.put(columns[i], value != null ? new BigDecimal(value) : null);
+                        node.put(columns[i], value);
                         break;
                     case FLOAT:
                         node.put(columns[i], value != null ? Float.valueOf(value) : null);
@@ -268,11 +267,7 @@ public class Snapshot {
             rows.add(node);
         }
 
-        try {
-            objectWriter.writeValue(out, root);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        OBJECT_WRITER.writeValue(out, root);
     }
 
     public static class SqlType {
@@ -334,7 +329,7 @@ public class Snapshot {
                 case DOUBLE:
                     return "double";
                 case NUMERIC:
-                    return "numeric (" + precision + ")";
+                    return String.format("numeric%s", precision == 0 ? "" : String.format(" (%d%s)", precision, (scale != 0 || scale != -127) ? ", " + scale : ""));
                 case DECIMAL:
                     return "decimal";
                 case CHAR:
@@ -426,8 +421,7 @@ public class Snapshot {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             Key key = (Key) o;
-            boolean equals = Arrays.equals(columns, key.columns);
-            return equals;
+            return Arrays.equals(columns, key.columns);
         }
 
         @Override
@@ -465,8 +459,10 @@ public class Snapshot {
 
         public boolean equals(Record comp, boolean[] useColumn) {
             for (int i = 0; i < columns.length; i++) {
-                if (useColumn != null && !useColumn[i]) continue;
-                if (!Objects.equals(columns[i], comp.columns[i])) return false;
+                if (useColumn != null && !useColumn[i])
+                    continue;
+                if (!Objects.equals(columns[i], comp.columns[i]))
+                    return false;
             }
             return true;
         }

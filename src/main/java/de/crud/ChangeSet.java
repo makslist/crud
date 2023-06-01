@@ -180,7 +180,7 @@ public class ChangeSet {
                 break;
             case NUMERIC:
             case DECIMAL:
-                stmt.setBigDecimal(index, value != null ? BigDecimal.valueOf(Double.parseDouble(value)) : null);
+                stmt.setBigDecimal(index, value != null ? new BigDecimal(value) : null);
                 break;
             case FLOAT:
                 stmt.setFloat(index, value != null ? Float.parseFloat(value) : null);
@@ -281,15 +281,15 @@ public class ChangeSet {
                 return "TIME" + "'" + value + "'";
             case TIMESTAMP:
                 return "TIMESTAMP" + "'" + value + "'";
-            case SMALLINT:
-            case TINYINT:
-            case INTEGER:
-            case BIGINT:
             case NUMERIC:
             case DECIMAL:
             case FLOAT:
             case REAL:
             case DOUBLE:
+            case SMALLINT:
+            case TINYINT:
+            case INTEGER:
+            case BIGINT:
             case BOOLEAN:
                 return value;
             case NULL:

@@ -9,7 +9,11 @@ public class ReadFileTest {
 
     @Test
     void readFile() {
-        Snapshot.read(new File("./test.snapshot"));
+        try {
+            Snapshot.read(new File("./test.snapshot"));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 }
