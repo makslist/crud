@@ -101,7 +101,7 @@ public class Crud {
         List<String> result = new ArrayList<>();
         DatabaseMetaData metaData = conn.getMetaData();
         String[] types = {"TABLE"};
-        ResultSet tables = metaData.getTables(null, user, "%" + pattern + "%", types);
+        ResultSet tables = metaData.getTables(null, user.toUpperCase(), pattern == null || pattern.isEmpty() ? "%" : pattern.toUpperCase(), types);
         while (tables.next())
             result.add(tables.getString("TABLE_NAME"));
         return result;
@@ -223,7 +223,7 @@ public class Crud {
                         break;
                     case BLOB:
                         Blob blob = rs.getBlob(i);
-                        record[i - 1] = rs.wasNull() ? null : new String(Base64.getEncoder().encode(blob.getBytes(0L, (int) blob.length())));
+                        record[i - 1] = rs.wasNull() ? null : new String(Base64.getEncoder().encode(blob.getBytes(1L, (int) blob.length())));
                         break;
                     case SQLXML:
                         break;

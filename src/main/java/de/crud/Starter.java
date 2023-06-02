@@ -244,15 +244,16 @@ public class Starter {
             try {
                 for (String table : crud.tables(config.exportAllTables)) {
                     String filename = "." + File.separator + table.toLowerCase() + (config.exportTime ? "_" + EXPORT_DATE_FORMAT.format(new Date()) : "") + ".snapshot";
-                    Snapshot snapshot = crud.fetch(config.exportTable, config.exportWhere);
                     try {
+                        Snapshot snapshot = crud.fetch(table, config.exportWhere);
                         snapshot.export(new FileOutputStream(filename));
-                        output.user("Exported table \"" + config.exportTable + "\" to file " + filename);
+                        output.user("Exported table \"" + table + "\" to file " + filename);
                     } catch (FileNotFoundException e) {
                         output.error("File " + filename + " not found.");
                     } catch (IOException e) {
                         output.error(e.getMessage());
-                        System.exit(2);
+                    } catch (SQLException e) {
+                        output.error("Error: " + table + ": " + e.getMessage() + "\n" + e.getSQLState());
                     }
                 }
             } catch (SQLException e) {
