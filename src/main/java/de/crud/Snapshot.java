@@ -169,7 +169,7 @@ public class Snapshot {
     }
 
     public ChangeSet delta(Snapshot target, List<String> ignoreColumns) {
-        if (!table.equals(target.table)) throw new RuntimeException("The tables have to have the same name.");
+        if (!table.equalsIgnoreCase(target.table)) throw new RuntimeException("The tables have to have the same name.");
         if (!Arrays.equals(columns, target.columns))
             throw new RuntimeException("The columns name and position have to be identical.");
 
@@ -329,7 +329,7 @@ public class Snapshot {
                 case DOUBLE:
                     return "double";
                 case NUMERIC:
-                    return String.format("numeric%s", precision == 0 ? "" : String.format(" (%d%s)", precision, (scale != 0 || scale != -127) ? ", " + scale : ""));
+                    return String.format("numeric%s", precision == 0 ? "" : String.format(" (%d%s)", precision, (scale != 0 && scale != -127) ? ", " + scale : ""));
                 case DECIMAL:
                     return "decimal";
                 case CHAR:

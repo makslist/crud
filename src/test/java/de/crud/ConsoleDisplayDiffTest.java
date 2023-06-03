@@ -41,7 +41,7 @@ public class ConsoleDisplayDiffTest {
             crud.execute("insert into tab (pk_char, col_char, col_date, pk_int) values ('222', 'test456', current_date, 2)");
             Snapshot after = crud.fetch("tab");
             ChangeSet change = reference.delta(after);
-            change.displayDiff();
+            change.displayDiff(true);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }

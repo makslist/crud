@@ -11,12 +11,15 @@ import java.util.*;
 
 public class Starter {
 
+    public static final String FILE_EXTENSION = "snapshot";
+
     private static class Config {
 
         private static final String COMMAND_LINE_PARAMETER = "Usage: dbd [{-v,--verbose}] [{--vendor} vendor name]\n" +
                 "           [{--hostname} url] [{--port} port number] [{--servicename} service name]\n" +
                 "           [{--user} user name] [{--password} password] [{--commit} commit]\n" +
-                "           [{-i, --import} path to reference file\n" +
+                "           [{-i, --import} path to reference file]\n" +
+                "           [{-u, --undolog} save undo log]\n" +
                 "           [{-f, --forceInsert} create table if necessary to insert]\n" +
                 "           [{-d, --delta} path to reference file to compare]]\n" +
                 "           [{-e, --export} name of the table to export]]\n" +
@@ -47,6 +50,7 @@ public class Starter {
                 config.password = prop.getProperty("password", null);
                 config.commit = Boolean.parseBoolean(prop.getProperty("commit", "false"));
 
+                config.undolog = Boolean.parseBoolean(prop.getProperty("undolog", "false"));
                 config.forceInsert = Boolean.parseBoolean(prop.getProperty("forceInsert", "false"));
                 config.ignoreColumns.addAll(Arrays.asList(prop.getProperty("ignoreColumns", "").split(",")));
                 config.exportTime = Boolean.parseBoolean(prop.getProperty("timestamp", "false"));
@@ -71,6 +75,7 @@ public class Starter {
             CmdLineParser.Option<Boolean> commit = parser.addBooleanOption("commit");
 
             CmdLineParser.Option<String> importFile = parser.addStringOption('i', "import");
+            CmdLineParser.Option<Boolean> undolog = parser.addBooleanOption('r', "undolog");
             CmdLineParser.Option<Boolean> forceInsert = parser.addBooleanOption('f', "forceInsert");
             CmdLineParser.Option<String> ignoreColumns = parser.addStringOption("ignoreColumns");
 
@@ -103,6 +108,7 @@ public class Starter {
             config.commit = parser.getOptionValue(commit, false);
 
             config.importFile = parser.getOptionValue(importFile, null);
+            config.undolog = parser.getOptionValue(undolog, false);
             config.forceInsert = parser.getOptionValue(forceInsert, false);
             config.ignoreColumns = new ArrayList<>(Arrays.asList(parser.getOptionValue(ignoreColumns, "").split(",")));
 
@@ -129,6 +135,7 @@ public class Starter {
             commit |= config.commit;
 
             importFile = importFile != null ? importFile : config.importFile;
+            undolog |= config.undolog;
             forceInsert |= config.forceInsert;
             config.ignoreColumns.forEach(c -> {
                 if (ignoreColumns.contains(c)) ignoreColumns.add(c);
@@ -156,6 +163,7 @@ public class Starter {
         boolean commit;
 
         String importFile;
+        boolean undolog;
         boolean forceInsert;
         List<String> ignoreColumns = new ArrayList<>();
         String exportTable;
@@ -179,120 +187,190 @@ public class Starter {
         if (config.help) {
             output.user(Config.LOGO);
             output.user(Config.COMMAND_LINE_PARAMETER);
+            System.exit(0);
         }
 
+        output.user("DBΔelta");
+
         if (config.vendor == null) {
-            output.error("No vendor given!");
+            output.error("\nNo vendor given!");
             output.error(Config.COMMAND_LINE_PARAMETER);
             System.exit(2);
         }
-        Crud crud;
-        switch (config.vendor) {
-            case "oracle":
-                crud = Crud.connectOracle(config.hostname, config.port, config.servicename, config.user, config.password);
-                break;
-            case "mysql":
-                crud = Crud.connectMySql(config.hostname, config.port, config.servicename, config.user, config.password);
-                break;
-            case "h2":
-                crud = Crud.connectH2();
-                break;
-            case "hsql":
-                crud = Crud.connectHSQL();
-                break;
-            default:
-                output.error("Unknown vendor: \"" + config.vendor + "\"");
-                System.exit(3);
-                return;
-        }
 
-        if (config.showDeltaFor != null) {
-            try {
-                File file = new File(config.showDeltaFor);
-                if (!file.exists()) {
-                    output.error(file.getName() + " does not exists.");
+        Crud crud = null;
+        try {
+            switch (config.vendor) {
+                case "oracle":
+                    crud = Crud.connectOracle(config.hostname, config.port, config.servicename, config.user, config.password);
+                    break;
+                case "mysql":
+                    crud = Crud.connectMySql(config.hostname, config.port, config.servicename, config.user, config.password);
+                    break;
+                case "h2":
+                    crud = Crud.connectH2();
+                    break;
+                case "hsql":
+                    crud = Crud.connectHSQL();
+                    break;
+                default:
+                    output.error("Unknown vendor: \"" + config.vendor + "\"");
+                    output.error("Try a known vendor: 'oracle', 'mysql', 'h2', 'hsql'");
+                    System.exit(3);
+            }
+
+            if (config.showDeltaFor != null) {
+                try {
+                    File file = new File(config.showDeltaFor);
+                    if (!file.exists()) {
+                        output.error(file.getName() + " does not exists.");
+                        System.exit(2);
+                    } else {
+                        Snapshot reference = Snapshot.read(file);
+                        Snapshot after = crud.fetch(reference.getTable(), reference.getWhere());
+                        ChangeSet change = reference.delta(after);
+                        change.displayDiff(config.verbose);
+                    }
+                } catch (SQLException e) {
+                    output.error(e.getMessage() + "\n" + e.getSQLState());
                     System.exit(2);
+                } catch (IOException e) {
+                    output.error(e.getMessage());
+                    System.exit(2);
+                }
+
+            } else if (config.importFile != null) {
+                File file = new File(config.importFile);
+                if (file.isFile() && file.exists()) {
+                    output.question("   Importing " + file.getName() + "? [Y/n]");
+                    if ("Y".equalsIgnoreCase(new Scanner(System.in).nextLine()))
+                        importFile(file, config, crud, output, false);
+
                 } else {
-                    Snapshot reference = Snapshot.read(file);
-                    Snapshot after = crud.fetch(reference.getTable(), reference.getWhere());
-                    ChangeSet change = reference.delta(after);
-                    change.displayDiff();
-                }
-            } catch (SQLException e) {
-                output.error(e.getMessage() + "\n" + e.getSQLState());
-                System.exit(2);
-            } catch (IOException e) {
-                output.error(e.getMessage());
-                System.exit(2);
-            }
-        } else if (config.exportTable != null) {
-            String filename = "." + File.separator + config.exportTable.toLowerCase() + (config.exportTime ? "_" + EXPORT_DATE_FORMAT.format(new Date()) : "") + ".snapshot";
-            try {
-                Snapshot snapshot = crud.fetch(config.exportTable, config.exportWhere);
-                snapshot.export(new FileOutputStream(filename));
-                output.user("Exported table \"" + config.exportTable + "\" to file " + filename);
-            } catch (FileNotFoundException e) {
-                output.error("File " + filename + " not found.");
-            } catch (SQLException e) {
-                output.error(e.getMessage() + "\n" + e.getSQLState());
-                System.exit(2);
-            } catch (IOException e) {
-                output.error(e.getMessage());
-                System.exit(2);
-            }
-        } else if (config.exportAllTables != null) {
-            try {
-                for (String table : crud.tables(config.exportAllTables)) {
-                    String filename = "." + File.separator + table.toLowerCase() + (config.exportTime ? "_" + EXPORT_DATE_FORMAT.format(new Date()) : "") + ".snapshot";
-                    try {
-                        Snapshot snapshot = crud.fetch(table, config.exportWhere);
-                        snapshot.export(new FileOutputStream(filename));
-                        output.user("Exported table \"" + table + "\" to file " + filename);
-                    } catch (FileNotFoundException e) {
-                        output.error("File " + filename + " not found.");
-                    } catch (IOException e) {
-                        output.error(e.getMessage());
-                    } catch (SQLException e) {
-                        output.error("Error: " + table + ": " + e.getMessage() + "\n" + e.getSQLState());
+                    File dir = new File(".");
+                    List<File> files = Arrays.asList(Objects.requireNonNull(dir.listFiles(f -> f.getName().contains(config.importFile) && f.getName().endsWith("." + FILE_EXTENSION))));
+                    files.sort((f, g) -> f.getName().compareTo(g.getName()));
+                    if (files.size() > 0) {
+                        output.question("   Importing " + files.toString() + "? [Y/n/a]");
+                        String answer = new Scanner(System.in).nextLine();
+                        boolean confirm = !"a".equalsIgnoreCase(answer);
+                        if ("Y".equalsIgnoreCase(answer) || "a".equalsIgnoreCase(answer))
+                            for (File value : files)
+                                importFile(value, config, crud, output, confirm);
                     }
                 }
-            } catch (SQLException e) {
-                output.error(e.getMessage() + "\n" + e.getSQLState());
-                System.exit(2);
-            }
-        } else if (config.importFile != null) {
-            try {
-                Snapshot reference = Snapshot.read(new File(config.importFile));
-                if (!reference.isEmpty() && config.forceInsert && crud.existsOrCreate(reference)) {
-                    output.error("No data to import in file " + config.importFile);
+                output.question("Committing changes? [Y/n]");
+                String commit = new Scanner(System.in).nextLine();
+                try {
+                    if ("Y".equalsIgnoreCase(commit)) {
+                        crud.commit();
+                    } else
+                        crud.rollback();
+                } catch (SQLException e) {
+                    output.error("Commit/rollback failed with error: " + e.getMessage() + " / " + e.getSQLState());
+                }
+
+            } else if (config.exportTable != null) {
+                String filename = "." + File.separator + config.exportTable.toLowerCase() + (config.exportTime ? "_" + EXPORT_DATE_FORMAT.format(new Date()) : "") + "." + FILE_EXTENSION;
+                try {
+                    Snapshot snapshot = crud.fetch(config.exportTable, config.exportWhere);
+                    snapshot.export(new FileOutputStream(filename));
+                    output.user("Exported table \"" + config.exportTable + "\" to file " + filename);
+                } catch (FileNotFoundException e) {
+                    output.error("File " + filename + " not found.");
+                } catch (SQLException e) {
+                    output.error(e.getMessage() + "\n" + e.getSQLState());
+                    System.exit(2);
+                } catch (IOException e) {
+                    output.error(e.getMessage());
                     System.exit(2);
                 }
 
-                ChangeSet change = crud.delta(reference, config.ignoreColumns);
-                if (!change.isEmpty()) {
-                    change.displayDiff();
-                    output.user("Apply diff to database? [Y/n]");
-                    Scanner scanner = new Scanner(System.in);
-                    String answer = scanner.nextLine();
-                    if ("".equals(answer) || "Y".equalsIgnoreCase(answer)) {
-                        crud.apply(change, config.commit);
-
-                        if (!change.isEmpty())
-                            output.user("-- Undo logs:");
-                        for (String stmt : change.sqlUndoStmt())
-                            output.user(stmt);
+            } else if (config.exportAllTables != null) {
+                try {
+                    for (String table : crud.tables(config.exportAllTables)) {
+                        String filename = "." + File.separator + table.toLowerCase() + (config.exportTime ? "_" + EXPORT_DATE_FORMAT.format(new Date()) : "") + "." + FILE_EXTENSION;
+                        try {
+                            Snapshot snapshot = crud.fetch(table, config.exportWhere);
+                            snapshot.export(new FileOutputStream(filename));
+                            output.user("Export table \"" + table + "\" to file " + filename);
+                        } catch (FileNotFoundException e) {
+                            output.error("File " + filename + " not found.");
+                        } catch (IOException e) {
+                            output.error(e.getMessage());
+                        } catch (SQLException e) {
+                            output.error("Error: " + table + ": " + e.getMessage() + "\n" + e.getSQLState());
+                        }
                     }
-                } else output.user("No differences found.");
+                } catch (SQLException e) {
+                    crud.rollback();
+                    output.error(e.getMessage() + "\n" + e.getSQLState());
+                    System.exit(2);
+                }
+
+            } else output.error("No usable parameters given!");
+        } catch (Exception e) {
+            try {
+                crud.rollback();
+            } catch (SQLException ex) {
+                output.error("Rollback failed: " + ex.getMessage() + " / " + ex.getSQLState());
+            }
+        } finally {
+            try {
+                crud.close();
             } catch (SQLException e) {
-                output.error(e.getMessage() + "\n" + e.getSQLState());
-                System.exit(2);
-            } catch (FileNotFoundException e) {
-                output.error("File " + config.importFile + " not found.");
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+                output.error("Closing connection failed: " + e.getMessage() + " / " + e.getSQLState());
+            }
+        }
+    }
+
+    private static void importFile(File file, Config config, Crud crud, OutPut output, boolean confirm) {
+        try {
+            output.user("Importing file " + file.getName());
+            Snapshot reference = Snapshot.read(file);
+            if (reference.isEmpty()) {
+                output.error("   No data to import.");
+                return;
+            } else if (config.forceInsert && crud.existsOrCreate(reference)) {
+                output.error("   Table " + reference.getTable() + " does not exist or could not be created.");
+                return;
             }
 
-        } else output.error("No usable parameters given!");
+            ChangeSet change = crud.delta(reference, config.ignoreColumns);
+            if (!change.isEmpty()) {
+                change.displayDiff(config.verbose);
+                boolean apply = true;
+                if (confirm) {
+                    output.question("Apply diff to database? [Y/n]");
+                    String answer = new Scanner(System.in).nextLine();
+                    apply = !"Y".equalsIgnoreCase(answer);
+                }
+                if (apply) {
+                    List<String> sqlUndoStmt = crud.apply(change, config.commit);
+                    if (!change.isEmpty() && config.undolog)
+                        writeUndoLogs(change.table(), sqlUndoStmt);
+                }
+            } else
+                output.user("   No differences found for table " + change.table());
+        } catch (SQLException e) {
+            output.error(e.getMessage() + "\n" + e.getSQLState());
+            System.exit(2);
+        } catch (FileNotFoundException e) {
+            output.error("File " + config.importFile + " not found.");
+            System.exit(2);
+        } catch (IOException e) {
+            output.error(e.getMessage());
+            System.exit(2);
+        }
+    }
+
+    private static void writeUndoLogs(String table, List<String> sqlUndoStmt) throws IOException {
+        File undo = new File("." + File.separator + table.toLowerCase() + "_" + EXPORT_DATE_FORMAT.format(new Date()) + ".undo");
+        Writer writer = new BufferedWriter(new FileWriter(undo));
+        writer.write("-- Undo logs for table " + table + "\n");
+        for (String stmt : sqlUndoStmt)
+            writer.write(stmt + "\n");
+        writer.close();
     }
 
 }

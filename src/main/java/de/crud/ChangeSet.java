@@ -36,6 +36,10 @@ public class ChangeSet {
         return target;
     }
 
+    public String table() {
+        return target.getTable();
+    }
+
     public List<Snapshot.Record> deleteRecs() {
         return deleteKeys.stream().map(target::getRecord).collect(Collectors.toList());
     }
@@ -52,7 +56,7 @@ public class ChangeSet {
         return deleteKeys.isEmpty() && updateKeys.isEmpty() && insertKeys.isEmpty();
     }
 
-    public void displayDiff() {
+    public void displayDiff(boolean detailed) {
         Map<String, Snapshot.SqlType> colTypes = getReference().getColumnTypes();
 
         String[] columnNames = getReference().columns().toArray(String[]::new);
@@ -60,23 +64,30 @@ public class ChangeSet {
         String[] keyColumnNames = getReference().pkColumns().toArray(String[]::new);
         String keyFormatter = Arrays.stream(keyColumnNames).map(n -> "%" + (alignRight(colTypes.get(n).type) ? "-" : "") + 12 + "s").collect(Collectors.joining(" | "));
 
-        if (!insertKeys.isEmpty()) {
-            output.user("New Records:");
-            output.user(String.format(recordFormatter, (Object[]) columnNames));
-            insertRecs().stream().map(r -> r.columns().toArray(String[]::new)).forEach(c -> output.user(String.format(recordFormatter, (Object[]) c)));
-        }
-        if (!deleteKeys.isEmpty()) {
-            output.user("\nDelete Records:");
-            output.user(String.format(keyFormatter, (Object[]) keyColumnNames));
-            deleteKeys.stream().map(k -> k.columns().toArray(String[]::new)).forEach(c -> output.user(String.format(keyFormatter, (Object[]) c)));
-        }
-        if (!updateKeys.isEmpty()) {
-            output.user("\nUpdated Records:");
-            output.user(String.format(recordFormatter, (Object[]) columnNames));
-            updateKeys.forEach(k -> {
-                output.user(String.format(recordFormatter, (Object[]) reference.getRecord(k).columns().toArray(String[]::new)));
-                output.user(String.format(recordFormatter, (Object[]) target.getRecord(k).columns().toArray(String[]::new)) + "\n");
-            });
+        if (insertKeys.isEmpty() && deleteKeys.isEmpty() && updateKeys.isEmpty())
+            output.user("   No differences found.");
+        else {
+            output.user("   Rows to" + (!insertKeys.isEmpty() ? " insert: " + insertKeys.size() : "") + (!deleteKeys.isEmpty() ? " delete: " + deleteKeys.size() : "") + (!updateKeys.isEmpty() ? " update: " + updateKeys.size() : ""));
+            if (detailed) {
+                if (!insertKeys.isEmpty()) {
+                    output.user("\n   New Records:");
+                    output.user(String.format(recordFormatter, (Object[]) columnNames));
+                    insertRecs().stream().map(r -> r.columns().toArray(String[]::new)).forEach(c -> output.user(String.format(recordFormatter, (Object[]) c)));
+                }
+                if (!deleteKeys.isEmpty()) {
+                    output.user("\n   Delete Records:");
+                    output.user(String.format(keyFormatter, (Object[]) keyColumnNames));
+                    deleteKeys.stream().map(k -> k.columns().toArray(String[]::new)).forEach(c -> output.user(String.format(keyFormatter, (Object[]) c)));
+                }
+                if (!updateKeys.isEmpty()) {
+                    output.user("\n   Updated Records:");
+                    output.user(String.format(recordFormatter, (Object[]) columnNames));
+                    updateKeys.forEach(k -> {
+                        output.user(String.format(recordFormatter, (Object[]) reference.getRecord(k).columns().toArray(String[]::new)));
+                        output.user(String.format(recordFormatter, (Object[]) target.getRecord(k).columns().toArray(String[]::new)) + "\n");
+                    });
+                }
+            }
         }
     }
 

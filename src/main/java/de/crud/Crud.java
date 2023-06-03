@@ -27,7 +27,7 @@ public class Crud {
     public static Crud connectHSQL() {
         try {
             Class.forName("org.hsqldb.jdbcDriver");
-            return new Crud("sa", DriverManager.getConnection("jdbc:hsqldb:data/tutorial", "sa", ""));
+            return new Crud("sa", DriverManager.getConnection("jdbc:hsqldb:mem:myDb", "sa", ""));
         } catch (SQLException e) {
             output.error("Connection unsuccessful: " + e.getMessage());
             System.exit(1);
@@ -143,8 +143,8 @@ public class Crud {
             return stmt.execute();
         } catch (SQLException e) {
             String sql = "create table " + snapshot.getTable() + " (" + snapshot.columns().map(c -> c + " " + (snapshot.getColumnTypes().get(c).getSql())).collect(Collectors.joining(", ")) + ", primary key (" + snapshot.pkColumns().collect(Collectors.joining(", ")) + "))";
-            output.user("Table " + snapshot.getTable() + " does not exist. Trying to create.");
-            output.user(sql);
+            output.user("   Table " + snapshot.getTable() + " does not exist. Trying to create.");
+            output.info(sql);
             return conn.prepareStatement(sql).execute();
         }
     }
@@ -242,22 +242,27 @@ public class Crud {
         return snapshot;
     }
 
-    public void apply(ChangeSet changes, boolean commit) throws SQLException {
+    public List<String> apply(ChangeSet changes, boolean commit) throws SQLException {
         if (!changes.insertRecs().isEmpty())
-            output.user("Inserting " + changes.insertRecs().size() + " rows");
+            output.user("   Inserting " + changes.insertRecs().size() + " rows");
         changes.applyInsert(conn);
         if (!changes.updateRecs().isEmpty())
-            output.user("Updating " + changes.updateRecs().size() + " rows");
+            output.user("   Updating " + changes.updateRecs().size() + " rows");
         changes.applyUpdate(conn);
         if (!changes.deleteRecs().isEmpty())
-            output.user("Deleting " + changes.deleteRecs().size() + " rows");
+            output.user("   Deleting " + changes.deleteRecs().size() + " rows");
         changes.applyDelete(conn);
         if (commit) execute("commit;");
 
-        if (!changes.isEmpty())
-            output.user("Undo logs:");
-        for (String undoStmt : changes.sqlUndoStmt())
-            output.user(undoStmt);
+        return changes.sqlUndoStmt();
+    }
+
+    public void commit() throws SQLException {
+        conn.commit();
+    }
+
+    public void rollback() throws SQLException {
+        conn.rollback();
     }
 
     public void write(ChangeSet changes, OutputStream out) {

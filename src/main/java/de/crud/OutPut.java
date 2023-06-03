@@ -25,6 +25,10 @@ public class OutPut {
         System.out.println(message);
     }
 
+    public void question(String message) {
+        System.out.print(message);
+    }
+
     public void error(String message) {
         if (level.ordinal() >= Level.ERROR.ordinal()) System.err.println(message);
     }
@@ -38,7 +42,7 @@ public class OutPut {
     }
 
     public enum Level {
-        SILENT, ERROR, USER, INFO, DEBUG
+        SILENT, ERROR, QUESTION, USER, INFO, DEBUG
     }
 
 }
