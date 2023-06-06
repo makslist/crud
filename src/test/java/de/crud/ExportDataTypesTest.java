@@ -17,7 +17,7 @@ public class ExportDataTypesTest {
 
     @BeforeEach
     void setUp() {
-        crud = Crud.connectH2();
+        crud = Crud.connectH2(false);
         try {
             crud.execute("create table numtypes (pk varchar(3), col2 smallint, col3 tinyint, col4 integer, col5 bigint, col6 numeric, col7 decimal, col8 float, col9 real, col10 double, primary key (pk))");
             crud.execute("create table datetypes (pk varchar(3), col12 date, col13 time, col14 timestamp, primary key (pk))");

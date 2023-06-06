@@ -10,7 +10,7 @@ public class FormattedTypesInSqlTest {
 
     @BeforeEach
     void setUp() {
-        crud = Crud.connectH2();
+        crud = Crud.connectH2(false);
         try {
             crud.execute("create table numtypes (pk varchar(3), col2 SMALLINT, col3 TINYINT, col4 INTEGER, col5 BIGINT, col6 NUMERIC, col7 DECIMAL, col8 FLOAT, col9 REAL, col10 DOUBLE, PRIMARY KEY (pk))");
             crud.execute("create table datetypes (pk varchar(3), col12 DATE, col13 TIME, col14 TIMESTAMP, PRIMARY KEY (pk))");

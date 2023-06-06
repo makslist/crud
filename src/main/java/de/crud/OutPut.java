@@ -1,10 +1,13 @@
 package de.crud;
 
+import java.util.*;
+
 public class OutPut {
 
+    private static final Scanner SCANNER = new Scanner(System.in);
     private static OutPut output;
 
-    public static OutPut create(Level level) {
+    public static OutPut getInstance(Level level) {
         if (OutPut.output == null) {
             OutPut.output = new OutPut(level);
         }
@@ -12,7 +15,7 @@ public class OutPut {
     }
 
     public static OutPut getInstance() {
-        return OutPut.output != null ? OutPut.output : OutPut.create(Level.USER);
+        return OutPut.output != null ? OutPut.output : OutPut.getInstance(Level.USER);
     }
 
     private final Level level;
@@ -25,8 +28,9 @@ public class OutPut {
         System.out.println(message);
     }
 
-    public void question(String message) {
-        System.out.print(message);
+    public boolean question(String message, String yesOption, String noOption) {
+        System.out.print(message + " [" + yesOption + "/" + noOption + "]");
+        return yesOption.equalsIgnoreCase(SCANNER.nextLine());
     }
 
     public void error(String message) {

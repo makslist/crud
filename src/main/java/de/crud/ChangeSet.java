@@ -17,7 +17,7 @@ public class ChangeSet {
     private final List<Snapshot.Key> updateKeys;
     private final List<Snapshot.Key> insertKeys;
 
-    private final OutPut output = OutPut.create(null);
+    private final OutPut output = OutPut.getInstance(null);
 
     public ChangeSet(Snapshot reference, Snapshot target, List<Snapshot.Key> insertKeys, List<Snapshot.Key> updateKeys, List<Snapshot.Key> deleteKeys) {
         this.reference = reference;
@@ -91,7 +91,7 @@ public class ChangeSet {
         }
     }
 
-    public void applyInsert(Connection conn) {
+    public void applyInsert(Connection conn, boolean continueOnError) {
         Snapshot ref = getReference();
         List<String> columns = ref.columns().collect(Collectors.toList());
         String cols = columns.stream().collect(Collectors.joining(", ", " (", ")"));
@@ -108,12 +108,14 @@ public class ChangeSet {
                 output.info(stmt.toString());
                 stmt.executeUpdate();
             } catch (SQLException e) {
-                throw new RuntimeException(e);
+                output.error(e.getMessage() + "\n" + sql);
+                if (!continueOnError)
+                    throw new RuntimeException(e);
             }
         }
     }
 
-    public void applyUpdate(Connection conn) {
+    public void applyUpdate(Connection conn, boolean continueOnError) {
         Snapshot ref = getReference();
         String set = ref.nonPkColumns().map(s -> s + " = ?").collect(Collectors.joining(", ", " set ", ""));
         String where = ref.getPk().columns().map(c -> c + " = ?").collect(Collectors.joining(" and ", " where ", ""));
@@ -133,12 +135,14 @@ public class ChangeSet {
                 output.info(stmt.toString());
                 stmt.executeUpdate();
             } catch (SQLException e) {
-                throw new RuntimeException(e);
+                output.error(e.getMessage() + "\n" + sql);
+                if (!continueOnError)
+                    throw new RuntimeException(e);
             }
         }
     }
 
-    public void applyDelete(Connection conn) {
+    public void applyDelete(Connection conn, boolean continueOnError) {
         Snapshot ref = getReference();
         String where = ref.getPk().columns().map(c -> c + " = ?").collect(Collectors.joining(" and ", " where ", ""));
         String sql = "delete " + ref.getTable() + where;
@@ -154,7 +158,9 @@ public class ChangeSet {
                 output.info(stmt.toString());
                 stmt.executeUpdate();
             } catch (SQLException e) {
-                throw new RuntimeException(e);
+                output.error(e.getMessage() + "\n" + sql);
+                if (!continueOnError)
+                    throw new RuntimeException(e);
             }
         }
     }
@@ -178,61 +184,64 @@ public class ChangeSet {
     }
 
     private void bindVar(PreparedStatement stmt, int type, int index, String value) throws SQLException {
-        switch (type) {
-            case SMALLINT:
-                stmt.setShort(index, value != null ? Short.parseShort(value) : null);
-                break;
-            case TINYINT:
-            case INTEGER:
-                stmt.setInt(index, value != null ? Integer.parseInt(value) : null);
-                break;
-            case BIGINT:
-                stmt.setLong(index, value != null ? Long.parseLong(value) : null);
-                break;
-            case NUMERIC:
-            case DECIMAL:
-                stmt.setBigDecimal(index, value != null ? new BigDecimal(value) : null);
-                break;
-            case FLOAT:
-                stmt.setFloat(index, value != null ? Float.parseFloat(value) : null);
-                break;
-            case REAL:
-            case DOUBLE:
-                stmt.setDouble(index, value != null ? Double.parseDouble(value) : null);
-                break;
-            case BOOLEAN:
-                stmt.setBoolean(index, value != null ? Boolean.parseBoolean(value) : null);
-                break;
-            case DATE:
-                stmt.setDate(index, value != null ? java.sql.Date.valueOf(value) : null);
-                break;
-            case TIME:
-                stmt.setTime(index, value != null ? Time.valueOf(value) : null);
-                break;
-            case TIMESTAMP:
-                stmt.setTimestamp(index, value != null ? Timestamp.valueOf(value) : null);
-                break;
-            case TIME_WITH_TIMEZONE:
-            case TIMESTAMP_WITH_TIMEZONE:
-            case BINARY:
-            case BIT:
-            case NULL:
-            case OTHER:
-            case REF:
-            case ROWID:
-            case SQLXML:
-            case VARBINARY:
-            case NCLOB:
-            case CLOB:
-                stmt.setClob(index, value != null ? new SerialClob(value.toCharArray()) : null);
-                break;
-            case BLOB:
-                stmt.setBlob(index, value != null ? new SerialBlob(Base64.getDecoder().decode(value.getBytes())) : null);
-                break;
-            default:
-                stmt.setString(index, value);
-                break;
-        }
+        if (value == null)
+            stmt.setNull(index, type);
+        else
+            switch (type) {
+                case SMALLINT:
+                    stmt.setShort(index, Short.parseShort(value));
+                    break;
+                case TINYINT:
+                case INTEGER:
+                    stmt.setInt(index, Integer.parseInt(value));
+                    break;
+                case BIGINT:
+                    stmt.setLong(index, Long.parseLong(value));
+                    break;
+                case NUMERIC:
+                case DECIMAL:
+                    stmt.setBigDecimal(index, new BigDecimal(value));
+                    break;
+                case FLOAT:
+                    stmt.setFloat(index, Float.parseFloat(value));
+                    break;
+                case REAL:
+                case DOUBLE:
+                    stmt.setDouble(index, Double.parseDouble(value));
+                    break;
+                case BOOLEAN:
+                    stmt.setBoolean(index, Boolean.parseBoolean(value));
+                    break;
+                case DATE:
+                    stmt.setDate(index, java.sql.Date.valueOf(value));
+                    break;
+                case TIME:
+                    stmt.setTime(index, Time.valueOf(value));
+                    break;
+                case TIMESTAMP:
+                    stmt.setTimestamp(index, Timestamp.valueOf(value));
+                    break;
+                case TIME_WITH_TIMEZONE:
+                case TIMESTAMP_WITH_TIMEZONE:
+                case BINARY:
+                case BIT:
+                case NULL:
+                case OTHER:
+                case REF:
+                case ROWID:
+                case SQLXML:
+                case VARBINARY:
+                case NCLOB:
+                case CLOB:
+                    stmt.setClob(index, new SerialClob(value.toCharArray()));
+                    break;
+                case BLOB:
+                    stmt.setBlob(index, new SerialBlob(Base64.getDecoder().decode(value.getBytes())));
+                    break;
+                default:
+                    stmt.setString(index, value);
+                    break;
+            }
     }
 
     public List<String> sqlApplyStmt() {

@@ -24,10 +24,10 @@ public class Crud {
         DECIMAL_FORMAT.setMaximumFractionDigits(340);
     }
 
-    public static Crud connectHSQL() {
+    public static Crud connectHSQL(boolean autocommit) {
         try {
             Class.forName("org.hsqldb.jdbcDriver");
-            return new Crud("sa", DriverManager.getConnection("jdbc:hsqldb:mem:myDb", "sa", ""));
+            return new Crud("sa", DriverManager.getConnection("jdbc:hsqldb:mem:testdb", "sa", ""), autocommit);
         } catch (SQLException e) {
             output.error("Connection unsuccessful: " + e.getMessage());
             System.exit(1);
@@ -37,10 +37,20 @@ public class Crud {
         return null;
     }
 
-    public static Crud connectMySql(String hostname, int port, String serviceName, String user, String password) {
+    public static Crud connectH2(boolean autocommit) {
+        try {
+            return new Crud("sa", DriverManager.getConnection("jdbc:h2:mem:myDb;DB_CLOSE_DELAY=-1;NON_KEYWORDS=KEY,VALUE", "sa", "sa"), autocommit);
+        } catch (SQLException e) {
+            output.error("Connection unsuccessful: " + e.getMessage());
+            System.exit(1);
+        }
+        return null;
+    }
+
+    public static Crud connectMySql(String hostname, int port, String serviceName, String user, String password, boolean autocommit) {
         try {
             Class.forName("org.gjt.mm.mysql.Driver");
-            return new Crud(user, DriverManager.getConnection("jdbc:mysql://" + hostname + ":" + port + "/" + serviceName, user, password));
+            return new Crud(user, DriverManager.getConnection("jdbc:mysql://" + hostname + ":" + port + "/" + serviceName, user, password), autocommit);
         } catch (SQLException e) {
             output.error("Connection unsuccessful: " + e.getMessage());
             System.exit(1);
@@ -50,23 +60,13 @@ public class Crud {
         return null;
     }
 
-    public static Crud connectH2() {
-        try {
-            return new Crud("sa", DriverManager.getConnection("jdbc:h2:mem:myDb;DB_CLOSE_DELAY=-1;NON_KEYWORDS=KEY,VALUE", "sa", "sa"));
-        } catch (SQLException e) {
-            output.error("Connection unsuccessful: " + e.getMessage());
-            System.exit(1);
-        }
-        return null;
-    }
-
-    public static Crud connectOracle(String hostname, int port, String serviceName, String user, String password) {
+    public static Crud connectOracle(String hostname, int port, String serviceName, String user, String password, boolean autocommit) {
         try {
             OracleDataSource ods = new OracleDataSource();
             ods.setURL("jdbc:oracle:thin:@//" + hostname + ":" + port + "/" + serviceName);
             ods.setUser(user);
             ods.setPassword(password);
-            return new Crud(user, ods.getConnection());
+            return new Crud(user, ods.getConnection(), autocommit);
         } catch (SQLException e) {
             output.error("Connection unsuccessful: " + e.getMessage());
             System.exit(1);
@@ -79,12 +79,12 @@ public class Crud {
 
     private final String user;
 
-    private Crud(String user, Connection conn) throws SQLException {
+    private Crud(String user, Connection conn, boolean autocommit) throws SQLException {
         this.user = user;
         this.conn = conn;
-        this.conn.setAutoCommit(false);
+        this.conn.setAutoCommit(autocommit);
         this.isMixedCase = conn.getMetaData().storesMixedCaseIdentifiers();
-        Crud.output = OutPut.create(OutPut.Level.USER);
+        Crud.output = OutPut.getInstance();
         output.user("Connection established...");
     }
 
@@ -143,9 +143,15 @@ public class Crud {
             return stmt.execute();
         } catch (SQLException e) {
             String sql = "create table " + snapshot.getTable() + " (" + snapshot.columns().map(c -> c + " " + (snapshot.getColumnTypes().get(c).getSql())).collect(Collectors.joining(", ")) + ", primary key (" + snapshot.pkColumns().collect(Collectors.joining(", ")) + "))";
-            output.user("   Table " + snapshot.getTable() + " does not exist. Trying to create.");
-            output.info(sql);
-            return conn.prepareStatement(sql).execute();
+            output.info("   Table " + snapshot.getTable() + " does not exist. Trying to create.");
+            try {
+                conn.prepareStatement(sql).execute();
+                return true;
+            } catch (SQLException ex) {
+                output.error("Creating table failed with: " + ex.getMessage());
+                output.error("Statement: " + sql);
+                return false;
+            }
         }
     }
 
@@ -242,17 +248,18 @@ public class Crud {
         return snapshot;
     }
 
-    public List<String> apply(ChangeSet changes, boolean commit) throws SQLException {
+    public List<String> apply(ChangeSet changes, boolean commit, boolean continueOnError) throws SQLException {
         if (!changes.insertRecs().isEmpty())
             output.user("   Inserting " + changes.insertRecs().size() + " rows");
-        changes.applyInsert(conn);
+        changes.applyInsert(conn, continueOnError);
         if (!changes.updateRecs().isEmpty())
             output.user("   Updating " + changes.updateRecs().size() + " rows");
-        changes.applyUpdate(conn);
+        changes.applyUpdate(conn, continueOnError);
         if (!changes.deleteRecs().isEmpty())
             output.user("   Deleting " + changes.deleteRecs().size() + " rows");
-        changes.applyDelete(conn);
-        if (commit) execute("commit;");
+        changes.applyDelete(conn, continueOnError);
+        if (commit)
+            commit();
 
         return changes.sqlUndoStmt();
     }

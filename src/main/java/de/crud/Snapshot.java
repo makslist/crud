@@ -246,10 +246,6 @@ public class Snapshot {
                     case BIGINT:
                         node.put(columns[i], value != null ? new BigInteger(value) : null);
                         break;
-                    case NUMERIC:
-                    case DECIMAL:
-                        node.put(columns[i], value);
-                        break;
                     case FLOAT:
                         node.put(columns[i], value != null ? Float.valueOf(value) : null);
                         break;

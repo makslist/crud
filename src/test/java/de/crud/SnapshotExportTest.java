@@ -17,7 +17,7 @@ public class SnapshotExportTest {
 
     @BeforeEach
     void setUp() {
-        crud = Crud.connectH2();
+        crud = Crud.connectH2(false);
         try {
             crud.execute("create table tab (pk_char varchar(3), col_char varchar(30), col_date date, pk_int integer, col_time time default current_time, primary key (pk_char, pk_int))");
             crud.execute("insert into tab (pk_char, col_char, col_date, pk_int) values ('111', 'test123', current_date, 1)");
