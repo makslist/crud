@@ -85,7 +85,9 @@ public class Crud {
         this.conn.setAutoCommit(autocommit);
         this.isMixedCase = conn.getMetaData().storesMixedCaseIdentifiers();
         Crud.output = OutPut.getInstance();
-        output.user("Connection established...");
+        output.userln("Connection established to " + conn.getMetaData().getDatabaseProductName() + " " +
+                conn.getMetaData().getDatabaseMajorVersion() + "." +
+                conn.getMetaData().getDatabaseMinorVersion() + " for schema \"" + this.user + "\"");
     }
 
     public void execute(String sql) throws SQLException {
@@ -231,7 +233,13 @@ public class Crud {
                         Blob blob = rs.getBlob(i);
                         record[i - 1] = rs.wasNull() ? null : new String(Base64.getEncoder().encode(blob.getBytes(1L, (int) blob.length())));
                         break;
+                    case OTHER:
+                    case JAVA_OBJECT:
+                    case DISTINCT:
+                    case STRUCT:
+                    case ARRAY:
                     case SQLXML:
+                        output.error("Datatype: " + rsmd.getColumnType(i) + " is not supported.");
                         break;
                     case TIME_WITH_TIMEZONE:
                     case TIMESTAMP_WITH_TIMEZONE:
@@ -250,13 +258,13 @@ public class Crud {
 
     public List<String> apply(ChangeSet changes, boolean commit, boolean continueOnError) throws SQLException {
         if (!changes.insertRecs().isEmpty())
-            output.user("   Inserting " + changes.insertRecs().size() + " rows");
+            output.userln("   Inserting " + changes.insertRecs().size() + " rows");
         changes.applyInsert(conn, continueOnError);
         if (!changes.updateRecs().isEmpty())
-            output.user("   Updating " + changes.updateRecs().size() + " rows");
+            output.userln("   Updating " + changes.updateRecs().size() + " rows");
         changes.applyUpdate(conn, continueOnError);
         if (!changes.deleteRecs().isEmpty())
-            output.user("   Deleting " + changes.deleteRecs().size() + " rows");
+            output.userln("   Deleting " + changes.deleteRecs().size() + " rows");
         changes.applyDelete(conn, continueOnError);
         if (commit)
             commit();

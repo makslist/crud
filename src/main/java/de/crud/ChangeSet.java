@@ -65,26 +65,26 @@ public class ChangeSet {
         String keyFormatter = Arrays.stream(keyColumnNames).map(n -> "%" + (alignRight(colTypes.get(n).type) ? "-" : "") + 12 + "s").collect(Collectors.joining(" | "));
 
         if (insertKeys.isEmpty() && deleteKeys.isEmpty() && updateKeys.isEmpty())
-            output.user("   No differences found.");
+            output.userln("   No differences found.");
         else {
-            output.user("   Rows to" + (!insertKeys.isEmpty() ? " insert: " + insertKeys.size() : "") + (!deleteKeys.isEmpty() ? " delete: " + deleteKeys.size() : "") + (!updateKeys.isEmpty() ? " update: " + updateKeys.size() : ""));
+            output.userln("   Rows to" + (!insertKeys.isEmpty() ? " insert: " + insertKeys.size() : "") + (!deleteKeys.isEmpty() ? "  delete: " + deleteKeys.size() : "") + (!updateKeys.isEmpty() ? "  update: " + updateKeys.size() : ""));
             if (detailed) {
                 if (!insertKeys.isEmpty()) {
-                    output.user("\n   New Records:");
-                    output.user(String.format(recordFormatter, (Object[]) columnNames));
-                    insertRecs().stream().map(r -> r.columns().toArray(String[]::new)).forEach(c -> output.user(String.format(recordFormatter, (Object[]) c)));
+                    output.userln("\n   New Records:");
+                    output.userln(String.format(recordFormatter, (Object[]) columnNames));
+                    insertRecs().stream().map(r -> r.columns().toArray(String[]::new)).forEach(c -> output.userln(String.format(recordFormatter, (Object[]) c)));
                 }
                 if (!deleteKeys.isEmpty()) {
-                    output.user("\n   Delete Records:");
-                    output.user(String.format(keyFormatter, (Object[]) keyColumnNames));
-                    deleteKeys.stream().map(k -> k.columns().toArray(String[]::new)).forEach(c -> output.user(String.format(keyFormatter, (Object[]) c)));
+                    output.userln("\n   Delete Records:");
+                    output.userln(String.format(keyFormatter, (Object[]) keyColumnNames));
+                    deleteKeys.stream().map(k -> k.columns().toArray(String[]::new)).forEach(c -> output.userln(String.format(keyFormatter, (Object[]) c)));
                 }
                 if (!updateKeys.isEmpty()) {
-                    output.user("\n   Updated Records:");
-                    output.user(String.format(recordFormatter, (Object[]) columnNames));
+                    output.userln("\n   Updated Records:");
+                    output.userln(String.format(recordFormatter, (Object[]) columnNames));
                     updateKeys.forEach(k -> {
-                        output.user(String.format(recordFormatter, (Object[]) reference.getRecord(k).columns().toArray(String[]::new)));
-                        output.user(String.format(recordFormatter, (Object[]) target.getRecord(k).columns().toArray(String[]::new)) + "\n");
+                        output.userln(String.format(recordFormatter, (Object[]) reference.getRecord(k).columns().toArray(String[]::new)));
+                        output.userln(String.format(recordFormatter, (Object[]) target.getRecord(k).columns().toArray(String[]::new)) + "\n");
                     });
                 }
             }

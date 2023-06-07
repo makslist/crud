@@ -11,7 +11,7 @@ public class Starter {
     private static final String LOGO = "  _____  ____                 _ _\n" +
             " |  __ \\|  _ \\     /\\        | | |\n" +
             " | |  | | |_) |   /  \\    ___| | |_ __ _\n" +
-            " | |  | |  _ <   / /\\ \\  / _ \\ | __/ _`|\n" +
+            " | |  | |  _ <   / /\\ \\  / _ \\ | __/ _` |\n" +
             " | |__| | |_) | / /__\\ \\|  __/ | || (_| |\n" +
             " |_____/|____/ /________\\\\___|_|\\__\\__,_|\n";
 
@@ -27,12 +27,12 @@ public class Starter {
         else output = OutPut.getInstance(OutPut.Level.USER);
 
         if (config.isHelp()) {
-            output.user(LOGO);
-            output.user(Config.COMMAND_LINE_PARAMETER);
+            output.userln(LOGO);
+            output.userln(Config.COMMAND_LINE_PARAMETER);
             System.exit(0);
         }
 
-        output.user("DBΔelta");
+        output.userln("DBΔelta");
 
         if (config.getVendor() == null) {
             output.error("\nNo vendor given!");
@@ -68,9 +68,10 @@ public class Starter {
                         output.error(file.getName() + " does not exists.");
                         System.exit(2);
                     } else {
+                        output.user("Comparing reference file " + file + " to db");
                         Snapshot reference = Snapshot.read(file);
                         Snapshot after = crud.fetch(reference.getTable(), reference.getWhere());
-                        ChangeSet change = reference.delta(after);
+                        ChangeSet change = reference.delta(after, config.getIgnoreColumns());
                         change.displayDiff(config.isVerbose());
                     }
                 } catch (SQLException e) {
@@ -106,11 +107,12 @@ public class Starter {
                 }
 
             } else if (config.getExportTable() != null) {
-                String filename = "." + File.separator + config.getExportTable().toLowerCase() + (config.isExportTime() ? "_" + EXPORT_DATE_FORMAT.format(new Date()) : "") + "." + FILE_EXTENSION;
+                String filename = "." + File.separator + config.getExportTable().toLowerCase() + exportTimeAppendix(config) + "." + FILE_EXTENSION;
                 try {
+                    output.user("Export table " + config.getExportTable());
                     Snapshot snapshot = crud.fetch(config.getExportTable(), config.getExportWhere());
                     snapshot.export(new FileOutputStream(filename));
-                    output.user("Exported table \"" + config.getExportTable() + "\" to file " + filename);
+                    output.userln(" to file " + filename);
                 } catch (FileNotFoundException e) {
                     output.error("File " + filename + " not found.");
                 } catch (SQLException e) {
@@ -124,11 +126,11 @@ public class Starter {
             } else if (config.getExportAllTables() != null) {
                 try {
                     for (String table : crud.tables(config.getExportAllTables())) {
-                        String filename = "." + File.separator + table.toLowerCase() + (config.isExportTime() ? "_" + EXPORT_DATE_FORMAT.format(new Date()) : "") + "." + FILE_EXTENSION;
+                        String filename = "." + File.separator + table.toLowerCase() + exportTimeAppendix(config) + "." + FILE_EXTENSION;
                         try {
                             Snapshot snapshot = crud.fetch(table, config.getExportWhere());
                             snapshot.export(new FileOutputStream(filename));
-                            output.user("Export table \"" + table + "\" to file " + filename);
+                            output.userln(" to file " + filename);
                         } catch (FileNotFoundException e) {
                             output.error("File " + filename + " not found.");
                         } catch (IOException e) {
@@ -146,7 +148,9 @@ public class Starter {
             } else output.error("No usable parameters given!");
         } catch (Exception e) {
             try {
+                e.printStackTrace();
                 if (crud != null) {
+                    output.error(e.getMessage());
                     crud.rollback();
                 }
             } catch (SQLException ex) {
@@ -163,15 +167,19 @@ public class Starter {
         }
     }
 
+    private static String exportTimeAppendix(Config config) {
+        return config.isExportTime() ? "_" + EXPORT_DATE_FORMAT.format(new Date()) : "";
+    }
+
     private static void importFile(File file, Config config, Crud crud, OutPut output) {
         try {
             output.user("Importing file " + file.getName());
             Snapshot reference = Snapshot.read(file);
             if (reference.isEmpty()) {
-                output.error("   No data to import.");
+                output.error(": No data to import.");
                 return;
             } else if (config.isForceInsert() && !crud.existsOrCreate(reference)) {
-                output.error("   Table " + reference.getTable() + " does not exist or could not be created.");
+                output.error(": Table " + reference.getTable() + " does not exist or could not be created.");
                 return;
             }
 
@@ -182,7 +190,7 @@ public class Starter {
                 if (!change.isEmpty() && config.isUndolog())
                     writeUndoLogs(change.table(), sqlUndoStmt);
             } else
-                output.user("   No differences found for table " + change.table());
+                output.userln("   No differences found for table " + change.table());
         } catch (SQLException e) {
             output.error(e.getMessage() + "\n" + e.getSQLState());
         } catch (FileNotFoundException e) {

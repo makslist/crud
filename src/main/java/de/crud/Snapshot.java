@@ -48,7 +48,7 @@ public class Snapshot {
     private Map<String, Integer> columnIndex;
     private Map<String, SqlType> columnTypes;
     private Key pk;
-    private List<Integer> pkIndices = new ArrayList<>();
+    private List<Integer> pkIndices;
     private String where;
     private List<Record> records = new ArrayList<>();
     private final Map<Key, Record> index = new HashMap<>();
@@ -59,22 +59,24 @@ public class Snapshot {
     public Snapshot(String table, String[] columns, Map<String, SqlType> columnTypes, List<String> pkColumns, String where) {
         this.table = table;
         this.columns = columns;
-        this.columnIndex = buildIndex(columns);
+        this.columnIndex = columnIndex();
         this.columnTypes = columnTypes;
-        this.pk = new Key(pkColumns);
-        this.pkIndices = pkColumns.stream().map(columnIndex::get).collect(Collectors.toList());
+        this.pk = new Key(pkColumns.stream().sorted((k1, k2) -> columnIndex().get(k1) - columnIndex().get(k2)).collect(Collectors.toList()));
+        this.pkIndices = pk.columns().map(columnIndex()::get).collect(Collectors.toList());
         this.where = where;
     }
 
-    private static Map<String, Integer> buildIndex(String[] columns) {
-        return IntStream.rangeClosed(0, columns.length - 1).boxed().collect(Collectors.toMap(i -> columns[i], Function.identity()));
+    private Map<String, Integer> columnIndex() {
+        if (this.columnIndex == null)
+            this.columnIndex = IntStream.rangeClosed(0, this.columns.length - 1).boxed().collect(Collectors.toMap(i -> this.columns[i], Function.identity()));
+        return this.columnIndex;
     }
 
     @JsonProperty(COLUMNS)
     public void setColumns(String[] columns) {
         this.columns = columns;
-        this.columnIndex = buildIndex(columns);
-        if (pk != null) this.pkIndices = pk.columns().map(columnIndex::get).collect(Collectors.toList());
+        if (this.pk != null && this.pkIndices == null)
+            this.pk = new Key(this.pk.columns().sorted((k1, k2) -> columnIndex().get(k1) - columnIndex().get(k2)).toArray(String[]::new));
     }
 
     public Stream<String> columns() {
@@ -82,7 +84,9 @@ public class Snapshot {
     }
 
     public List<Integer> pkIndex() {
-        return pkIndices;
+        if (this.pkIndices == null)
+            this.pkIndices = pk.columns().map(columnIndex()::get).collect(Collectors.toList());
+        return this.pkIndices;
     }
 
     public Stream<Key> keys() {
@@ -135,7 +139,8 @@ public class Snapshot {
     @JsonProperty(PRIMARY_KEY)
     public void setPkColumns(String[] columns) {
         this.pk = new Key(columns);
-        if (columnIndex != null) this.pkIndices = pk.columns().map(columnIndex::get).collect(Collectors.toList());
+        if (columnIndex() != null)
+            this.pk = new Key(Stream.of(columns).sorted((k1, k2) -> columnIndex().get(k1) - columnIndex().get(k2)).toArray(String[]::new));
     }
 
     public List<Record> getRecords() {
@@ -174,7 +179,8 @@ public class Snapshot {
             throw new RuntimeException("The columns name and position have to be identical.");
 
         List<Snapshot.Key> deleteKeys = target.keys().filter(r -> !containedInIndex(r)).collect(Collectors.toList());
-        List<Snapshot.Key> updateKeys = keys().filter(target::containedInIndex).filter(key -> !getRecord(key).equals(target.getRecord(key), useColumns(ignoreColumns))).collect(Collectors.toList());
+        boolean[] useColumn = useColumns(ignoreColumns);
+        List<Snapshot.Key> updateKeys = keys().filter(target::containedInIndex).filter(key -> !getRecord(key).equals(target.getRecord(key), useColumn)).collect(Collectors.toList());
         List<Snapshot.Key> insertKeys = keys().filter(r -> !target.containedInIndex(r)).collect(Collectors.toList());
         return new ChangeSet(this, target, insertKeys, updateKeys, deleteKeys);
     }
@@ -187,7 +193,7 @@ public class Snapshot {
         if (!ignoreColumns.isEmpty()) {
             boolean[] useColumn = new boolean[columns.length];
             Arrays.fill(useColumn, true);
-            ignoreColumns.forEach(c -> useColumn[columnIndex.get(c)] = false);
+            ignoreColumns.forEach(c -> useColumn[columnIndex().get(c)] = false);
             return useColumn;
         } else return null;
     }
@@ -227,7 +233,7 @@ public class Snapshot {
         }
         root.putIfAbsent(COLUMN_TYPES, colTypes);
 
-        Arrays.stream(this.pk.columns).forEach(root.putArray(PRIMARY_KEY)::add);
+        this.pk.columns().forEach(root.putArray(PRIMARY_KEY)::add);
         root.put(WHERE, whereStmt);
 
         ArrayNode rows = root.putArray(RECORDS);
@@ -438,7 +444,7 @@ public class Snapshot {
         }
 
         public String column(String name) {
-            return columns[snapshot.columnIndex.get(name)];
+            return columns[snapshot.columnIndex().get(name)];
         }
 
         public Stream<String> columns() {
@@ -450,7 +456,7 @@ public class Snapshot {
         }
 
         public Key key() {
-            return new Key(snapshot.pkIndices.stream().map(i -> columns[i]).collect(Collectors.toList()));
+            return new Key(snapshot.pkIndex().stream().map(i -> columns[i]).collect(Collectors.toList()));
         }
 
         public boolean equals(Record comp, boolean[] useColumn) {

@@ -42,7 +42,8 @@ public class Config {
 
             config.undolog = Boolean.parseBoolean(prop.getProperty("undolog", "false"));
             config.forceInsert = Boolean.parseBoolean(prop.getProperty("forceInsert", "false"));
-            config.ignoreColumns.addAll(Arrays.asList(prop.getProperty("ignoreColumns", "").split(",")));
+            String ignoreColumnsOption = prop.getProperty("ignoreColumns", "");
+            config.ignoreColumns = ignoreColumnsOption.isEmpty() ? new ArrayList<>() : new ArrayList<>(Arrays.asList(ignoreColumnsOption.split(",")));
             config.exportTime = Boolean.parseBoolean(prop.getProperty("timestamp", "false"));
         } catch (IOException ex) {
             return config;
@@ -106,7 +107,8 @@ public class Config {
         config.importFile = parser.getOptionValue(importFile, null);
         config.undolog = parser.getOptionValue(undolog, false);
         config.forceInsert = parser.getOptionValue(forceInsert, false);
-        config.ignoreColumns = new ArrayList<>(Arrays.asList(parser.getOptionValue(ignoreColumns, "").split(",")));
+        String ignoreColumnsOption = parser.getOptionValue(ignoreColumns, "");
+        config.ignoreColumns = ignoreColumnsOption.isEmpty() ? new ArrayList<>() : new ArrayList<>(Arrays.asList(ignoreColumnsOption.split(",")));
 
         config.exportTable = parser.getOptionValue(exportTable, null);
         config.exportAllTables = parser.getOptionValue(exportAllTables, null);
@@ -137,7 +139,7 @@ public class Config {
         undolog |= config.undolog;
         forceInsert |= config.forceInsert;
         config.ignoreColumns.forEach(c -> {
-            if (ignoreColumns.contains(c)) ignoreColumns.add(c);
+            if (!ignoreColumns.contains(c)) ignoreColumns.add(c);
         });
         exportTable = exportTable != null ? exportTable : config.exportTable;
         exportAllTables = exportAllTables != null ? exportAllTables : config.exportAllTables;
