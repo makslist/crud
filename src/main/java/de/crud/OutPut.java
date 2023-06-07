@@ -25,6 +25,10 @@ public class OutPut {
     }
 
     public void user(String message) {
+        System.out.print(message);
+    }
+
+    public void userln(String message) {
         System.out.println(message);
     }
 
