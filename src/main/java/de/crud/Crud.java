@@ -130,16 +130,12 @@ public class Crud {
         return pkColumns;
     }
 
-    public Snapshot fetch(String table) throws SQLException {
-        return fetch(table, null);
-    }
-
     public ChangeSet delta(Snapshot snapshot, List<String> ignoreColumns) throws SQLException {
         Snapshot current = fetch(snapshot.getTable(), snapshot.getWhere());
         return snapshot.delta(current, ignoreColumns);
     }
 
-    public boolean existsOrCreate(Snapshot snapshot) throws SQLException {
+    public boolean existsOrCreate(Snapshot snapshot) {
         try {
             PreparedStatement stmt = conn.prepareStatement("select * from " + snapshot.getTable() + " where 1 = 2");
             return stmt.execute();
@@ -150,11 +146,15 @@ public class Crud {
                 conn.prepareStatement(sql).execute();
                 return true;
             } catch (SQLException ex) {
-                output.error("Creating table failed with: " + ex.getMessage());
-                output.error("Statement: " + sql);
+                output.error("   Creating table failed with: " + ex.getMessage());
+                output.error("   Statement: " + sql);
                 return false;
             }
         }
+    }
+
+    public Snapshot fetch(String table) throws SQLException {
+        return fetch(table, null);
     }
 
     public Snapshot fetch(String table, String whereStmt) throws SQLException {

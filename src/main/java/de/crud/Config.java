@@ -11,15 +11,16 @@ public class Config {
     public static final String COMMAND_LINE_PARAMETER = "Usage: dbd [{-v,--verbose}] [{--vendor} vendor name]\n" +
             "           [{--hostname} url] [{--port} port number] [{--servicename} service name]\n" +
             "           [{--user} user name] [{--password} password] [{--commit} commit]\n" +
-            "           [{-i, --import} path to reference file]\n" +
-            "           [{-u, --undolog} save undo log]\n" +
-            "           [{-c, --continueOnError} continue on error]\n" +
-            "           [{-f, --forceInsert} create table if necessary to insert]\n" +
-            "           [{-d, --delta} path to reference file to compare]]\n" +
-            "           [{-e, --export} name of the table to export]]\n" +
-            "           [{-a, --alltables} pattern or name of the tables to export]]\n" +
-            "           [{--time} add a timestamp to the filename]]\n" +
-            "           [{-w, --where} where statement]";
+            "           [{-i, --import} file or path to reference file(s)]\n" +
+            "               [{-u, --undolog} save undo log]\n" +
+            "               [{-c, --continueOnError} continue on error]\n" +
+            "               [{-f, --force} create table if it does not exist]\n" +
+            "               [{--ignoreColumns} ignore columns when comparing]\n" +
+            "           [{-d, --delta} file or path to reference file(s)]\n" +
+            "               [{--ignoreColumns} ignore columns when comparing]\n" +
+            "           [{-e, --export} name (incl. wildcards) of the table(s) to export]\n" +
+            "               [{-w, --where} where statement]\n" +
+            "               [{--timestamp} add a timestamp to the filename]";
 
     private static Config loadConfig() {
         Config config = new Config();
@@ -74,7 +75,6 @@ public class Config {
         CmdLineParser.Option<String> ignoreColumns = parser.addStringOption("ignoreColumns");
 
         CmdLineParser.Option<String> exportTable = parser.addStringOption('e', "export");
-        CmdLineParser.Option<String> exportAllTables = parser.addStringOption('a', "alltables");
         CmdLineParser.Option<Boolean> exportTime = parser.addBooleanOption("timestamp");
         CmdLineParser.Option<String> exportWhere = parser.addStringOption('w', "where");
 
@@ -111,7 +111,6 @@ public class Config {
         config.ignoreColumns = ignoreColumnsOption.isEmpty() ? new ArrayList<>() : new ArrayList<>(Arrays.asList(ignoreColumnsOption.split(",")));
 
         config.exportTable = parser.getOptionValue(exportTable, null);
-        config.exportAllTables = parser.getOptionValue(exportAllTables, null);
         config.exportTime = parser.getOptionValue(exportTime, false);
         config.exportWhere = parser.getOptionValue(exportWhere, null);
 
@@ -142,7 +141,6 @@ public class Config {
             if (!ignoreColumns.contains(c)) ignoreColumns.add(c);
         });
         exportTable = exportTable != null ? exportTable : config.exportTable;
-        exportAllTables = exportAllTables != null ? exportAllTables : config.exportAllTables;
         exportTime |= config.exportTime;
         exportWhere = exportWhere != null ? exportWhere : config.exportWhere;
 
@@ -171,7 +169,6 @@ public class Config {
     private boolean forceInsert;
     private List<String> ignoreColumns = new ArrayList<>();
     private String exportTable;
-    private String exportAllTables;
     private boolean exportTime;
     private String exportWhere;
 
@@ -239,10 +236,6 @@ public class Config {
 
     public String getExportTable() {
         return exportTable;
-    }
-
-    public String getExportAllTables() {
-        return exportAllTables;
     }
 
     public boolean isExportTime() {

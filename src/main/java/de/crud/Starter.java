@@ -1,6 +1,7 @@
 package de.crud;
 
 import java.io.*;
+import java.nio.file.*;
 import java.sql.*;
 import java.text.*;
 import java.util.Date;
@@ -40,43 +41,47 @@ public class Starter {
             System.exit(2);
         }
 
-        Crud crud = null;
+        Crud crud = connect(config, output);
         try {
-            switch (config.getVendor()) {
-                case "oracle":
-                    crud = Crud.connectOracle(config.getHostname(), config.getPort(), config.getServicename(), config.getUser(), config.getPassword(), config.isAutocommit());
-                    break;
-                case "mysql":
-                    crud = Crud.connectMySql(config.getHostname(), config.getPort(), config.getServicename(), config.getUser(), config.getPassword(), config.isAutocommit());
-                    break;
-                case "h2":
-                    crud = Crud.connectH2(config.isAutocommit());
-                    break;
-                case "hsql":
-                    crud = Crud.connectHSQL(config.isAutocommit());
-                    break;
-                default:
-                    output.error("Unknown vendor: \"" + config.getVendor() + "\"");
-                    output.error("Try a known vendor: 'oracle', 'mysql', 'h2', 'hsql'");
-                    System.exit(3);
-            }
-
             if (config.showDeltaFor() != null) {
                 try {
                     File file = new File(config.showDeltaFor());
-                    if (!file.exists()) {
+                    if (!file.exists())
                         output.error(file.getName() + " does not exists.");
-                        System.exit(2);
-                    } else {
-                        output.user("Comparing reference file " + file + " to db");
+                    else if (file.isFile() && file.exists()) {
                         Snapshot reference = Snapshot.read(file);
-                        Snapshot after = crud.fetch(reference.getTable(), reference.getWhere());
-                        ChangeSet change = reference.delta(after, config.getIgnoreColumns());
-                        change.displayDiff(config.isVerbose());
+                        output.userln("Comparing reference file " + file + " to table " + reference.getTable() + (reference.getWhere() != null ? " with condition " + reference.getWhere() : ""));
+                        try {
+                            ChangeSet change = reference.delta(crud.fetch(reference.getTable(), reference.getWhere()), config.getIgnoreColumns());
+                            change.displayDiff(config.isVerbose());
+                        } catch (SQLException e) {
+                            if (reference.isEmpty())
+                                output.userln("   Reference file empty and delta caused exception");
+                            else {
+                                output.error("   Error: " + e.getMessage());
+                                output.error("   " + reference.getRecords().size() + " records in reference file");
+                            }
+                        }
+                    } else if (file.isDirectory()) {
+                        List<File> files = Arrays.asList(Objects.requireNonNull(file.listFiles(f -> f.getName().contains(config.showDeltaFor()) && f.getName().endsWith("." + FILE_EXTENSION))));
+                        files.sort(Comparator.comparing(File::getName));
+                        if (!files.isEmpty())
+                            for (File f : files) {
+                                Snapshot reference = Snapshot.read(f);
+                                output.userln("Comparing reference file " + f + " to table " + reference.getTable() + (reference.getWhere() != null ? " with condition " + reference.getWhere() : ""));
+                                try {
+                                    ChangeSet change = reference.delta(crud.fetch(reference.getTable(), reference.getWhere()), config.getIgnoreColumns());
+                                    change.displayDiff(config.isVerbose());
+                                } catch (SQLException e) {
+                                    if (reference.isEmpty())
+                                        output.userln("   Reference file empty and delta caused exception");
+                                    else {
+                                        output.error("   Error: " + e.getMessage());
+                                        output.error("   " + reference.getRecords().size() + " records in reference file");
+                                    }
+                                }
+                            }
                     }
-                } catch (SQLException e) {
-                    output.error(e.getMessage() + "\n" + e.getSQLState());
-                    System.exit(2);
                 } catch (IOException e) {
                     output.error(e.getMessage());
                     System.exit(2);
@@ -84,18 +89,22 @@ public class Starter {
 
             } else if (config.getImportFile() != null) {
                 File file = new File(config.getImportFile());
-                if (file.isFile() && file.exists()) {
-                    if (output.question("   Importing " + file.getName() + "?", "Y", "n"))
-                        importFile(file, config, crud, output);
-                } else {
-                    File dir = new File(".");
-                    List<File> files = Arrays.asList(Objects.requireNonNull(dir.listFiles(f -> f.getName().contains(config.getImportFile()) && f.getName().endsWith("." + FILE_EXTENSION))));
+                if (!file.exists()) {
+                    output.error(file.getName() + " does not exists.");
+                    System.exit(2);
+                } else if (file.isFile() && file.exists())
+                    importFile(file, config, crud, output);
+                else if (file.isDirectory()) {
+                    List<File> files = Arrays.asList(Objects.requireNonNull(file.listFiles(f -> f.getName().contains(config.getImportFile()) && f.getName().endsWith("." + FILE_EXTENSION))));
                     files.sort(Comparator.comparing(File::getName));
-                    if (files.size() > 0 && output.question("   Importing " + files + "?", "Y", "n"))
-                        for (File value : files)
-                            importFile(value, config, crud, output);
+                    if (!files.isEmpty()) {
+                        output.userln("Files found: " + files);
+                        if (output.question("   Importing " + files.size() + " files?", "Y", "n"))
+                            for (File f : files)
+                                importFile(f, config, crud, output);
+                    }
                 }
-                if (!config.isAutocommit() && !config.isCommit()) {
+                if (!config.isAutocommit() && !config.isCommit())
                     try {
                         if (output.question("Committing changes?", "Y", "n"))
                             crud.commit();
@@ -104,39 +113,20 @@ public class Starter {
                     } catch (SQLException e) {
                         output.error("Commit/rollback failed with error: " + e.getMessage() + " / " + e.getSQLState());
                     }
-                }
 
             } else if (config.getExportTable() != null) {
-                String filename = "." + File.separator + config.getExportTable().toLowerCase() + exportTimeAppendix(config) + "." + FILE_EXTENSION;
                 try {
-                    output.user("Export table " + config.getExportTable());
-                    Snapshot snapshot = crud.fetch(config.getExportTable(), config.getExportWhere());
-                    snapshot.export(new FileOutputStream(filename));
-                    output.userln(" to file " + filename);
-                } catch (FileNotFoundException e) {
-                    output.error("File " + filename + " not found.");
-                } catch (SQLException e) {
-                    output.error(e.getMessage() + "\n" + e.getSQLState());
-                    System.exit(2);
-                } catch (IOException e) {
-                    output.error(e.getMessage());
-                    System.exit(2);
-                }
-
-            } else if (config.getExportAllTables() != null) {
-                try {
-                    for (String table : crud.tables(config.getExportAllTables())) {
+                    for (String table : crud.tables(config.getExportTable())) {
                         String filename = "." + File.separator + table.toLowerCase() + exportTimeAppendix(config) + "." + FILE_EXTENSION;
                         try {
+                            output.user("Export table " + table);
                             Snapshot snapshot = crud.fetch(table, config.getExportWhere());
-                            snapshot.export(new FileOutputStream(filename));
-                            output.userln(" to file " + filename);
-                        } catch (FileNotFoundException e) {
-                            output.error("File " + filename + " not found.");
+                            snapshot.export(Files.newOutputStream(Paths.get(filename)));
+                            output.user(" to file " + filename);
+                        } catch (SQLException e) {
+                            output.error("   Error: " + e.getMessage());
                         } catch (IOException e) {
                             output.error(e.getMessage());
-                        } catch (SQLException e) {
-                            output.error("Error: " + table + ": " + e.getMessage() + "\n" + e.getSQLState());
                         }
                     }
                 } catch (SQLException e) {
@@ -162,8 +152,26 @@ public class Starter {
                     crud.close();
                 }
             } catch (SQLException e) {
-                output.error("Closing connection failed: " + e.getMessage() + " / " + e.getSQLState());
+                output.error("Closing connection failed: " + e.getMessage());
             }
+        }
+    }
+
+    private static Crud connect(Config config, OutPut output) {
+        switch (config.getVendor()) {
+            case "oracle":
+                return Crud.connectOracle(config.getHostname(), config.getPort(), config.getServicename(), config.getUser(), config.getPassword(), config.isAutocommit());
+            case "mysql":
+                return Crud.connectMySql(config.getHostname(), config.getPort(), config.getServicename(), config.getUser(), config.getPassword(), config.isAutocommit());
+            case "h2":
+                return Crud.connectH2(config.isAutocommit());
+            case "hsql":
+                return Crud.connectHSQL(config.isAutocommit());
+            default:
+                output.error("Unknown vendor: \"" + config.getVendor() + "\"");
+                output.error("   Try a known vendor: 'oracle', 'mysql', 'h2', 'hsql'");
+                System.exit(3);
+                return null;
         }
     }
 
@@ -173,28 +181,30 @@ public class Starter {
 
     private static void importFile(File file, Config config, Crud crud, OutPut output) {
         try {
-            output.user("Importing file " + file.getName());
             Snapshot reference = Snapshot.read(file);
-            if (reference.isEmpty()) {
-                output.error(": No data to import.");
-                return;
-            } else if (config.isForceInsert() && !crud.existsOrCreate(reference)) {
-                output.error(": Table " + reference.getTable() + " does not exist or could not be created.");
-                return;
-            }
+            output.userln("Importing reference data from " + file + " into table " + reference.getTable() + (reference.getWhere() != null ? " with condition " + reference.getWhere() : ""));
 
-            ChangeSet change = crud.delta(reference, config.getIgnoreColumns());
-            if (!change.isEmpty()) {
-                change.displayDiff(config.isVerbose());
-                List<String> sqlUndoStmt = crud.apply(change, config.isCommit(), config.isContinueOnError());
-                if (!change.isEmpty() && config.isUndolog())
-                    writeUndoLogs(change.table(), sqlUndoStmt);
-            } else
-                output.userln("   No differences found for table " + change.table());
-        } catch (SQLException e) {
-            output.error(e.getMessage() + "\n" + e.getSQLState());
-        } catch (FileNotFoundException e) {
-            output.error("File " + config.getImportFile() + " not found.");
+            try {
+                if (!reference.isEmpty() && config.isForceInsert() && !crud.existsOrCreate(reference)) {
+                    output.error("   Table " + reference.getTable() + " does not exist or could not be created.");
+                    return;
+                }
+
+                ChangeSet change = crud.delta(reference, config.getIgnoreColumns());
+                if (!change.isEmpty()) {
+                    List<String> sqlUndoStmt = crud.apply(change, config.isCommit(), config.isContinueOnError());
+                    if (!change.isEmpty() && config.isUndolog())
+                        writeUndoLogs(change.table(), sqlUndoStmt);
+                } else
+                    output.userln("   No differences found");
+            } catch (SQLException e) {
+                if (reference.isEmpty()) {
+                    output.userln("   Reference file empty and delta caused exception");
+                } else {
+                    output.error("   Error: " + e.getMessage());
+                    output.error("   " + reference.getRecords().size() + " records in reference file");
+                }
+            }
         } catch (IOException e) {
             output.error(e.getMessage());
         }
