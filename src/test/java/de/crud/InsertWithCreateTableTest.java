@@ -36,10 +36,10 @@ public class InsertWithCreateTableTest {
             Snapshot reference = crud.fetch("tab");
             crud.execute("drop table tab");
 
-            crud.existsOrCreate(reference);
+            crud.existsOrCreate(reference, true);
             ChangeSet change = reference.delta(crud.fetch("tab"));
             Assertions.assertEquals(1, change.insertRecs().size());
-            crud.apply(change, false,false);
+            crud.apply(change, false, false);
 
             ChangeSet empty = reference.delta(crud.fetch("tab"));
             Assertions.assertEquals(0, empty.deleteRecs().size());

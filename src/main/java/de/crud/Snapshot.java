@@ -175,8 +175,11 @@ public class Snapshot {
 
     public ChangeSet delta(Snapshot target, List<String> ignoreColumns) {
         if (!table.equalsIgnoreCase(target.table)) throw new RuntimeException("The tables have to have the same name.");
-        if (!Arrays.equals(columns, target.columns))
-            throw new RuntimeException("The columns name and position have to be identical.");
+        if (!Arrays.equals(columns, target.columns)) {
+            System.out.println("   The columns names and positions have to be identical.");
+            System.out.println("   Reference order: " + Arrays.toString(columns));
+            System.out.println("   Found: " + Arrays.toString(target.columns));
+        }
 
         List<Snapshot.Key> deleteKeys = target.keys().filter(r -> !containedInIndex(r)).collect(Collectors.toList());
         boolean[] useColumn = useColumns(ignoreColumns);
@@ -192,8 +195,7 @@ public class Snapshot {
 
         if (!ignoreColumns.isEmpty()) {
             boolean[] useColumn = new boolean[columns.length];
-            Arrays.fill(useColumn, true);
-            ignoreColumns.forEach(c -> useColumn[columnIndex().get(c)] = false);
+            columns().forEach(c -> useColumn[columnIndex().get(c)] = !ignoreColumns.contains(c));
             return useColumn;
         } else return null;
     }

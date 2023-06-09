@@ -12,7 +12,7 @@ import java.util.stream.*;
 
 import static java.sql.Types.*;
 
-public class Crud {
+public class Crud implements AutoCloseable {
 
     public static final SimpleDateFormat SQL_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
     private static final DecimalFormat DECIMAL_FORMAT;
@@ -92,7 +92,9 @@ public class Crud {
 
     public void execute(String sql) throws SQLException {
         output.debug(sql);
-        conn.prepareStatement(sql).executeUpdate();
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.executeUpdate();
+        }
     }
 
     public void close() throws SQLException {
@@ -135,22 +137,28 @@ public class Crud {
         return snapshot.delta(current, ignoreColumns);
     }
 
-    public boolean existsOrCreate(Snapshot snapshot) {
+    public boolean existsOrCreate(Snapshot snapshot, boolean createTable) {
         try {
-            PreparedStatement stmt = conn.prepareStatement("select * from " + snapshot.getTable() + " where 1 = 2");
-            return stmt.execute();
-        } catch (SQLException e) {
-            String sql = "create table " + snapshot.getTable() + " (" + snapshot.columns().map(c -> c + " " + (snapshot.getColumnTypes().get(c).getSql())).collect(Collectors.joining(", ")) + ", primary key (" + snapshot.pkColumns().collect(Collectors.joining(", ")) + "))";
-            output.info("   Table " + snapshot.getTable() + " does not exist. Trying to create.");
-            try {
-                conn.prepareStatement(sql).execute();
-                return true;
-            } catch (SQLException ex) {
-                output.error("   Creating table failed with: " + ex.getMessage());
-                output.error("   Statement: " + sql);
-                return false;
+            DatabaseMetaData meta = conn.getMetaData();
+            try (ResultSet resultSet = meta.getTables(null, null, snapshot.getTable().toUpperCase(), new String[]{"TABLE"});) {
+                if (resultSet.next())
+                    return true;
+                else if (createTable) {
+                    output.info("   Table " + snapshot.getTable() + " does not exist. Trying to create.");
+                    String sqlCreate = "create table " + snapshot.getTable() + " (" + snapshot.columns().map(c -> c + " " + (snapshot.getColumnTypes().get(c).getSql())).collect(Collectors.joining(", ")) + ", primary key (" + snapshot.pkColumns().collect(Collectors.joining(", ")) + "))";
+                    try (PreparedStatement create = conn.prepareStatement(sqlCreate)) {
+                        return create.execute();
+                    } catch (SQLException ex) {
+                        output.error("      Creating table failed with: " + ex.getMessage());
+                        output.error("      Statement: " + sqlCreate);
+                    }
+                }
             }
+        } catch (SQLException e) {
+            output.error(e.getMessage());
+            e.printStackTrace();
         }
+        return false;
     }
 
     public Snapshot fetch(String table) throws SQLException {
@@ -158,102 +166,108 @@ public class Crud {
     }
 
     public Snapshot fetch(String table, String whereStmt) throws SQLException {
-        PreparedStatement stmt = conn.prepareStatement("select * from " + table + (whereStmt != null ? " where " + whereStmt : ""));
-        stmt.setFetchSize(1000);
-        ResultSet rs = stmt.executeQuery();
-        ResultSetMetaData rsmd = rs.getMetaData();
-        int columnCount = rsmd.getColumnCount();
+        String sql = "select * from " + table + (whereStmt != null ? " where " + whereStmt : "");
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setFetchSize(1000);
+            ResultSet rs = stmt.executeQuery();
+            ResultSetMetaData rsmd = rs.getMetaData();
+            int columnCount = rsmd.getColumnCount();
 
-        Map<String, Snapshot.SqlType> columnTypes = new HashMap<>();
-        String[] columns = new String[columnCount];
-        for (int i = 1; i <= columnCount; i++) {
-            String columnName = isMixedCase ? rsmd.getColumnName(i) : rsmd.getColumnName(i).toLowerCase();
-            columnTypes.put(columnName, new Snapshot.SqlType(rsmd.getColumnType(i), rsmd.getPrecision(i), rsmd.getScale(i)));
-            columns[i - 1] = columnName;
-        }
-
-        Snapshot snapshot = new Snapshot(table, columns, columnTypes, descPkOf(table), whereStmt);
-
-        while (rs.next()) {
-            String[] record = new String[columnCount];
+            Map<String, Snapshot.SqlType> columnTypes = new HashMap<>();
+            String[] columns = new String[columnCount];
             for (int i = 1; i <= columnCount; i++) {
-                switch (rsmd.getColumnType(i)) {
-                    case SMALLINT:
-                        short sho = rs.getShort(i);
-                        record[i - 1] = rs.wasNull() ? null : String.valueOf(sho);
-                        break;
-                    case TINYINT:
-                    case INTEGER:
-                        int in = rs.getInt(i);
-                        record[i - 1] = rs.wasNull() ? null : String.valueOf(in);
-                        break;
-                    case BIGINT:
-                        long lon = rs.getLong(i);
-                        record[i - 1] = rs.wasNull() ? null : String.valueOf(lon);
-                        break;
-                    case NUMERIC:
-                    case DECIMAL:
-                        BigDecimal bigDecimal = rs.getBigDecimal(i);
-                        record[i - 1] = rs.wasNull() ? null : DECIMAL_FORMAT.format(bigDecimal);
-                        break;
-                    case FLOAT:
-                        float floa = rs.getFloat(i);
-                        record[i - 1] = rs.wasNull() ? null : String.valueOf(floa);
-                        break;
-                    case REAL:
-                    case DOUBLE:
-                        double doub = rs.getDouble(i);
-                        record[i - 1] = rs.wasNull() ? null : String.valueOf(doub);
-                        break;
-                    case BOOLEAN:
-                        boolean bool = rs.getBoolean(i);
-                        record[i - 1] = rs.wasNull() ? null : String.valueOf(bool);
-                        break;
-                    case NULL:
-                        record[i - 1] = null;
-                        break;
-                    case DATE:
-                        java.sql.Date date = rs.getDate(i);
-                        record[i - 1] = rs.wasNull() ? null : SQL_DATE_FORMAT.format(date);
-                        break;
-                    case TIME:
-                        Time time = rs.getTime(i);
-                        record[i - 1] = rs.wasNull() ? null : time.toLocalTime().toString();
-                        break;
-                    case TIMESTAMP:
-                        Timestamp timestamp = rs.getTimestamp(i);
-                        record[i - 1] = rs.wasNull() ? null : new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SS").format(new Date(timestamp.getTime()));
-                        break;
-                    case NCLOB:
-                    case CLOB:
-                        Clob clob = rs.getClob(i);
-                        record[i - 1] = rs.wasNull() ? null : clob.getSubString(1, (int) clob.length());
-                        break;
-                    case BLOB:
-                        Blob blob = rs.getBlob(i);
-                        record[i - 1] = rs.wasNull() ? null : new String(Base64.getEncoder().encode(blob.getBytes(1L, (int) blob.length())));
-                        break;
-                    case OTHER:
-                    case JAVA_OBJECT:
-                    case DISTINCT:
-                    case STRUCT:
-                    case ARRAY:
-                    case SQLXML:
-                        output.error("Datatype: " + rsmd.getColumnType(i) + " is not supported.");
-                        break;
-                    case TIME_WITH_TIMEZONE:
-                    case TIMESTAMP_WITH_TIMEZONE:
-                    case BINARY:
-                    case BIT:
-                    default:
-                        String string = rs.getString(i);
-                        record[i - 1] = rs.wasNull() ? null : string;
-                        break;
-                }
+                String columnName = isMixedCase ? rsmd.getColumnName(i) : rsmd.getColumnName(i).toLowerCase();
+                columnTypes.put(columnName, new Snapshot.SqlType(rsmd.getColumnType(i), rsmd.getPrecision(i), rsmd.getScale(i)));
+                columns[i - 1] = columnName;
             }
-            snapshot.addRecord(record);
+
+            Snapshot snapshot = new Snapshot(table, columns, columnTypes, descPkOf(table), whereStmt);
+
+            long rowCount = 0;
+            while (rs.next()) {
+                rowCount++;
+                if (rowCount % 100000 == 0)
+                    output.userln("   " + rowCount + " rows so far");
+                String[] record = new String[columnCount];
+                for (int i = 1; i <= columnCount; i++) {
+                    switch (rsmd.getColumnType(i)) {
+                        case SMALLINT:
+                            short sho = rs.getShort(i);
+                            record[i - 1] = rs.wasNull() ? null : String.valueOf(sho);
+                            break;
+                        case TINYINT:
+                        case INTEGER:
+                            int in = rs.getInt(i);
+                            record[i - 1] = rs.wasNull() ? null : String.valueOf(in);
+                            break;
+                        case BIGINT:
+                            long lon = rs.getLong(i);
+                            record[i - 1] = rs.wasNull() ? null : String.valueOf(lon);
+                            break;
+                        case NUMERIC:
+                        case DECIMAL:
+                            BigDecimal bigDecimal = rs.getBigDecimal(i);
+                            record[i - 1] = rs.wasNull() ? null : DECIMAL_FORMAT.format(bigDecimal);
+                            break;
+                        case FLOAT:
+                            float floa = rs.getFloat(i);
+                            record[i - 1] = rs.wasNull() ? null : String.valueOf(floa);
+                            break;
+                        case REAL:
+                        case DOUBLE:
+                            double doub = rs.getDouble(i);
+                            record[i - 1] = rs.wasNull() ? null : String.valueOf(doub);
+                            break;
+                        case BOOLEAN:
+                            boolean bool = rs.getBoolean(i);
+                            record[i - 1] = rs.wasNull() ? null : String.valueOf(bool);
+                            break;
+                        case NULL:
+                            record[i - 1] = null;
+                            break;
+                        case DATE:
+                            java.sql.Date date = rs.getDate(i);
+                            record[i - 1] = rs.wasNull() ? null : SQL_DATE_FORMAT.format(date);
+                            break;
+                        case TIME:
+                            Time time = rs.getTime(i);
+                            record[i - 1] = rs.wasNull() ? null : time.toLocalTime().toString();
+                            break;
+                        case TIMESTAMP:
+                            Timestamp timestamp = rs.getTimestamp(i);
+                            record[i - 1] = rs.wasNull() ? null : new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SS").format(new Date(timestamp.getTime()));
+                            break;
+                        case NCLOB:
+                        case CLOB:
+                            Clob clob = rs.getClob(i);
+                            record[i - 1] = rs.wasNull() ? null : clob.getSubString(1, (int) clob.length());
+                            break;
+                        case BLOB:
+                            Blob blob = rs.getBlob(i);
+                            record[i - 1] = rs.wasNull() ? null : new String(Base64.getEncoder().encode(blob.getBytes(1L, (int) blob.length())));
+                            break;
+                        case OTHER:
+                        case JAVA_OBJECT:
+                        case DISTINCT:
+                        case STRUCT:
+                        case ARRAY:
+                        case SQLXML:
+                            output.error("Datatype: " + rsmd.getColumnType(i) + " is not supported.");
+                            break;
+                        case TIME_WITH_TIMEZONE:
+                        case TIMESTAMP_WITH_TIMEZONE:
+                        case BINARY:
+                        case BIT:
+                        default:
+                            String string = rs.getString(i);
+                            record[i - 1] = rs.wasNull() ? null : string;
+                            break;
+                    }
+                }
+                snapshot.addRecord(record);
+            }
+            return snapshot;
         }
-        return snapshot;
     }
 
     public List<String> apply(ChangeSet changes, boolean commit, boolean continueOnError) throws SQLException {
