@@ -3,6 +3,7 @@ package de.crud;
 import org.junit.jupiter.api.*;
 
 import java.sql.*;
+import java.util.*;
 
 public class ConsoleDisplayDiffTest {
 
@@ -40,7 +41,7 @@ public class ConsoleDisplayDiffTest {
             crud.execute("update tab set col_char = 'changed data' where pk_char = '111' and pk_int = 2");
             crud.execute("insert into tab (pk_char, col_char, col_date, pk_int) values ('222', 'test456', current_date, 2)");
             Snapshot after = crud.fetch("tab");
-            ChangeSet change = reference.delta(after);
+            ChangeSet change = reference.delta(after, Collections.emptyList());
             change.displayDiff(true);
         } catch (SQLException e) {
             throw new RuntimeException(e);

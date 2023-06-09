@@ -3,6 +3,7 @@ package de.crud;
 import org.junit.jupiter.api.*;
 
 import java.sql.*;
+import java.util.*;
 
 public class FormattedTypesInSqlTest {
 
@@ -41,9 +42,10 @@ public class FormattedTypesInSqlTest {
             Snapshot reference = crud.fetch("numtypes");
             crud.execute("delete numtypes");
 
-            for (String sql : reference.delta(crud.fetch("numtypes")).sqlApplyStmt()) crud.execute(sql);
+            for (String sql : reference.delta(crud.fetch("numtypes"), Collections.emptyList()).sqlApplyStmt())
+                crud.execute(sql);
 
-            ChangeSet nothing = reference.delta(crud.fetch("numtypes"));
+            ChangeSet nothing = reference.delta(crud.fetch("numtypes"), Collections.emptyList());
             Assertions.assertTrue(nothing.isEmpty());
         } catch (SQLException e) {
             throw new RuntimeException(e);
@@ -57,9 +59,10 @@ public class FormattedTypesInSqlTest {
             Snapshot reference = crud.fetch("datetypes");
             crud.execute("delete datetypes");
 
-            for (String sql : reference.delta(crud.fetch("datetypes")).sqlApplyStmt()) crud.execute(sql);
+            for (String sql : reference.delta(crud.fetch("datetypes"), Collections.emptyList()).sqlApplyStmt())
+                crud.execute(sql);
 
-            Assertions.assertTrue(reference.delta(crud.fetch("datetypes")).isEmpty());
+            Assertions.assertTrue(reference.delta(crud.fetch("datetypes"), Collections.emptyList()).isEmpty());
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -72,9 +75,10 @@ public class FormattedTypesInSqlTest {
             Snapshot reference = crud.fetch("binarytypes");
             crud.execute("delete binarytypes");
 
-            for (String sql : reference.delta(crud.fetch("binarytypes")).sqlApplyStmt()) crud.execute(sql);
+            for (String sql : reference.delta(crud.fetch("binarytypes"), Collections.emptyList()).sqlApplyStmt())
+                crud.execute(sql);
 
-            Assertions.assertTrue(reference.delta(crud.fetch("binarytypes")).isEmpty());
+            Assertions.assertTrue(reference.delta(crud.fetch("binarytypes"), Collections.emptyList()).isEmpty());
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -87,10 +91,11 @@ public class FormattedTypesInSqlTest {
             Snapshot reference = crud.fetch("lobtypes");
             crud.execute("delete lobtypes");
 
-            for (String sql : reference.delta(crud.fetch("lobtypes")).sqlApplyStmt()) crud.execute(sql);
+            for (String sql : reference.delta(crud.fetch("lobtypes"), Collections.emptyList()).sqlApplyStmt())
+                crud.execute(sql);
 
             Snapshot after = crud.fetch("lobtypes");
-            ChangeSet nothing = reference.delta(after);
+            ChangeSet nothing = reference.delta(after, Collections.emptyList());
             Assertions.assertTrue(nothing.isEmpty());
         } catch (SQLException e) {
             throw new RuntimeException(e);

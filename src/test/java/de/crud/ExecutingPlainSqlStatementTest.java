@@ -4,6 +4,7 @@ import org.junit.jupiter.api.*;
 
 import java.io.*;
 import java.sql.*;
+import java.util.*;
 
 public class ExecutingPlainSqlStatementTest {
 
@@ -38,14 +39,14 @@ public class ExecutingPlainSqlStatementTest {
         try {
             Snapshot reference = crud.fetch("tab");
             crud.execute("insert into tab (pk_char, col_char, col_date, pk_int) values ('222', 'test456', current_date, 2)");
-            ChangeSet change = reference.delta(crud.fetch("tab"));
+            ChangeSet change = reference.delta(crud.fetch("tab"), Collections.emptyList());
             Assertions.assertEquals(1, change.deleteRecs().size());
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             crud.write(change, baos);
             crud.execute(baos.toString());
 
-            Assertions.assertTrue(reference.delta(crud.fetch("tab")).isEmpty());
+            Assertions.assertTrue(reference.delta(crud.fetch("tab"), Collections.emptyList()).isEmpty());
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -56,14 +57,14 @@ public class ExecutingPlainSqlStatementTest {
         try {
             Snapshot reference = crud.fetch("tab");
             crud.execute("update tab set col_char = 'changed data' where pk_char = '222' and pk_int = 1");
-            ChangeSet change = reference.delta(crud.fetch("tab"));
+            ChangeSet change = reference.delta(crud.fetch("tab"), Collections.emptyList());
             Assertions.assertEquals(1, change.updateRecs().size());
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             crud.write(change, baos);
             crud.execute(baos.toString());
 
-            ChangeSet after = reference.delta(crud.fetch("tab"));
+            ChangeSet after = reference.delta(crud.fetch("tab"), Collections.emptyList());
             Assertions.assertTrue(after.isEmpty());
         } catch (SQLException e) {
             throw new RuntimeException(e);
@@ -75,14 +76,14 @@ public class ExecutingPlainSqlStatementTest {
         try {
             Snapshot reference = crud.fetch("tab");
             crud.execute("delete tab where pk_char = '222' and pk_int = 1");
-            ChangeSet change = reference.delta(crud.fetch("tab"));
+            ChangeSet change = reference.delta(crud.fetch("tab"), Collections.emptyList());
             Assertions.assertEquals(1, change.insertRecs().size());
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             crud.write(change, baos);
             crud.execute(baos.toString());
 
-            ChangeSet after = reference.delta(crud.fetch("tab"));
+            ChangeSet after = reference.delta(crud.fetch("tab"), Collections.emptyList());
             Assertions.assertTrue(after.isEmpty());
         } catch (SQLException e) {
             throw new RuntimeException(e);

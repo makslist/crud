@@ -3,6 +3,7 @@ package de.crud;
 import org.junit.jupiter.api.*;
 
 import java.sql.*;
+import java.util.*;
 
 public class ApplyChangesTest {
 
@@ -38,13 +39,13 @@ public class ApplyChangesTest {
             Snapshot reference = crud.fetch("tab");
             crud.execute("insert into tab (pk_char, col_char, col_date, pk_int) values ('222', 'test123', current_date, 2)");
 
-            ChangeSet change = reference.delta(crud.fetch("tab"));
+            ChangeSet change = reference.delta(crud.fetch("tab"), Collections.emptyList());
             Assertions.assertEquals(1, change.deleteRecs().size());
             Assertions.assertEquals(0, change.insertRecs().size());
             Assertions.assertEquals(0, change.updateRecs().size());
-            crud.apply(change, false,false);
+            crud.apply(change, false, false);
 
-            ChangeSet empty = reference.delta(crud.fetch("tab"));
+            ChangeSet empty = reference.delta(crud.fetch("tab"), Collections.emptyList());
             Assertions.assertEquals(0, empty.deleteRecs().size());
             Assertions.assertEquals(0, empty.insertRecs().size());
             Assertions.assertEquals(0, empty.updateRecs().size());
@@ -59,13 +60,13 @@ public class ApplyChangesTest {
             Snapshot reference = crud.fetch("tab");
             crud.execute("delete tab where pk_char = '222'");
 
-            ChangeSet change = reference.delta(crud.fetch("tab"));
+            ChangeSet change = reference.delta(crud.fetch("tab"), Collections.emptyList());
             Assertions.assertEquals(0, change.deleteRecs().size());
             Assertions.assertEquals(1, change.insertRecs().size());
             Assertions.assertEquals(0, change.updateRecs().size());
-            crud.apply(change, false,false);
+            crud.apply(change, false, false);
 
-            ChangeSet empty = reference.delta(crud.fetch("tab"));
+            ChangeSet empty = reference.delta(crud.fetch("tab"), Collections.emptyList());
             Assertions.assertEquals(0, empty.deleteRecs().size());
             Assertions.assertEquals(0, empty.insertRecs().size());
             Assertions.assertEquals(0, empty.updateRecs().size());
@@ -80,13 +81,13 @@ public class ApplyChangesTest {
             Snapshot reference = crud.fetch("tab");
             crud.execute("update tab set col_char = 'changed data' where pk_char = '222'");
 
-            ChangeSet change = reference.delta(crud.fetch("tab"));
+            ChangeSet change = reference.delta(crud.fetch("tab"), Collections.emptyList());
             Assertions.assertEquals(0, change.deleteRecs().size());
             Assertions.assertEquals(0, change.insertRecs().size());
             Assertions.assertEquals(1, change.updateRecs().size());
-            crud.apply(change, false,false);
+            crud.apply(change, false, false);
 
-            ChangeSet empty = reference.delta(crud.fetch("tab"));
+            ChangeSet empty = reference.delta(crud.fetch("tab"), Collections.emptyList());
             Assertions.assertEquals(0, empty.deleteRecs().size());
             Assertions.assertEquals(0, empty.insertRecs().size());
             Assertions.assertEquals(0, empty.updateRecs().size());

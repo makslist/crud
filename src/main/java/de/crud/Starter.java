@@ -55,7 +55,6 @@ public class Starter {
                         if (!files.isEmpty())
                             for (File f : files)
                                 compareFile(f, config, output, crud);
-
                     }
                 } catch (IOException e) {
                     output.error(e.getMessage());
@@ -145,51 +144,40 @@ public class Starter {
 
         if (crud.existsOrCreate(reference, false))
             try {
-                Snapshot target = crud.fetch(reference.getTable(), reference.getWhere());
-                ChangeSet change = reference.delta(target, config.getIgnoreColumns());
+                ChangeSet change = crud.delta(reference, config.getIgnoreColumns());
                 change.displayDiff(config.isVerbose());
             } catch (SQLException e) {
                 output.error("   Error: " + e.getMessage());
                 e.printStackTrace();
             }
         else if (reference.isEmpty())
-            output.userln("   Reference is empty and table does not exist.");
+            output.userln("   Reference is empty and table does not exist. Table could be dropped: 'drop table " + reference.getTable() + "';");
         else
             output.error("   Error: Table " + reference.getTable() + " does not exist!");
     }
 
-    private static void importFile(File file, Config config, Crud crud, OutPut output) {
-        try {
-            Snapshot reference = Snapshot.read(file);
-            output.userln("Importing reference data from " + file + " into table " + reference.getTable() + (reference.getWhere() != null ? " with condition " + reference.getWhere() : ""));
+    private static void importFile(File file, Config config, Crud crud, OutPut output) throws IOException {
+        Snapshot reference = Snapshot.read(file);
+        output.userln("Importing reference data from " + file + " into table " + reference.getTable() + (reference.getWhere() != null ? " with condition " + reference.getWhere() : ""));
 
+        if (crud.existsOrCreate(reference, !reference.isEmpty() && config.isForceInsert()))
             try {
-                if (reference.isEmpty()) {
-                    if (crud.existsOrCreate(reference, config.isForceInsert()))
-                        output.error("   Reference is empty but table still exists!");
-                } else if (crud.existsOrCreate(reference, config.isForceInsert())) {
-                    ChangeSet change = crud.delta(reference, config.getIgnoreColumns());
-                    if (change.isEmpty())
-                        output.userln("   No differences found");
-                    else {
-                        List<String> sqlUndoStmt = crud.apply(change, config.isCommit(), config.isContinueOnError());
-                        if (config.isUndolog())
-                            writeUndoLogs(change.table(), sqlUndoStmt);
-                    }
-                } else
-                    output.error("   Table " + reference.getTable() + " does not exist or could not be created.");
-            } catch (SQLException e) {
-                if (reference.isEmpty())
-                    output.userln("   Reference file empty and delta caused exception");
+                ChangeSet change = crud.delta(reference, config.getIgnoreColumns());
+                if (change.isEmpty())
+                    output.userln("   No differences found");
                 else {
-                    output.error("   Error: " + e.getMessage());
-                    output.error("   " + reference.getRecords().size() + " records in reference file");
+                    List<String> sqlUndoStmt = crud.apply(change, config.isCommit(), config.isContinueOnError());
+                    if (config.isUndolog())
+                        writeUndoLogs(change.table(), sqlUndoStmt);
                 }
+            } catch (SQLException e) {
+                output.error("   Error: " + e.getMessage());
+                e.printStackTrace();
             }
-        } catch (IOException e) {
-            output.error(e.getMessage());
-        }
-
+        else if (reference.isEmpty())
+            output.error("   Reference is empty but table still exists!");
+        else
+            output.error("   Error: Table " + reference.getTable() + " does not exist!");
     }
 
     private static void writeUndoLogs(String table, List<String> sqlUndoStmt) throws IOException {

@@ -3,6 +3,7 @@ package de.crud;
 import org.junit.jupiter.api.*;
 
 import java.sql.*;
+import java.util.*;
 
 public class InsertWithCreateTableTest {
 
@@ -37,11 +38,11 @@ public class InsertWithCreateTableTest {
             crud.execute("drop table tab");
 
             crud.existsOrCreate(reference, true);
-            ChangeSet change = reference.delta(crud.fetch("tab"));
+            ChangeSet change = reference.delta(crud.fetch("tab"), Collections.emptyList());
             Assertions.assertEquals(1, change.insertRecs().size());
             crud.apply(change, false, false);
 
-            ChangeSet empty = reference.delta(crud.fetch("tab"));
+            ChangeSet empty = reference.delta(crud.fetch("tab"), Collections.emptyList());
             Assertions.assertEquals(0, empty.deleteRecs().size());
             Assertions.assertEquals(0, empty.insertRecs().size());
             Assertions.assertEquals(0, empty.updateRecs().size());

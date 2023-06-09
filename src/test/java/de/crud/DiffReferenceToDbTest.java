@@ -40,7 +40,7 @@ public class DiffReferenceToDbTest {
             Snapshot reference = crud.fetch("tab", "pk_char = '222'");
             crud.execute("insert into tab (pk_char, col_char, col_date, pk_int) values ('222', 'test456', current_date, 2)");
 
-            ChangeSet change = reference.delta(crud.fetch("tab", "pk_char = '222'"));
+            ChangeSet change = reference.delta(crud.fetch("tab", "pk_char = '222'"), Collections.emptyList());
             Assertions.assertEquals(1, change.deleteRecs().size());
             Assertions.assertEquals(0, change.insertRecs().size());
             Assertions.assertEquals(0, change.updateRecs().size());
@@ -55,7 +55,7 @@ public class DiffReferenceToDbTest {
             Snapshot reference = crud.fetch("tab", "pk_char = '222'");
             crud.execute("update tab set col_char = 'changed data' where pk_char = '222' and pk_int = 1");
 
-            ChangeSet change = reference.delta(crud.fetch("tab", "pk_char = '222'"));
+            ChangeSet change = reference.delta(crud.fetch("tab", "pk_char = '222'"), Collections.emptyList());
             Assertions.assertEquals(1, change.updateRecs().size());
             Assertions.assertEquals(0, change.insertRecs().size());
             Assertions.assertEquals(0, change.deleteRecs().size());
@@ -70,7 +70,7 @@ public class DiffReferenceToDbTest {
             Snapshot reference = crud.fetch("tab", "pk_char = '222'");
             crud.execute("insert into tab (pk_char, col_char, col_date, pk_int) values ('222', 'test456', current_date, 2)");
 
-            ChangeSet change = crud.fetch("tab", "pk_char = '222'").delta(reference);
+            ChangeSet change = crud.fetch("tab", "pk_char = '222'").delta(reference, Collections.emptyList());
             Assertions.assertEquals(1, change.insertRecs().size());
             Assertions.assertEquals(0, change.updateRecs().size());
             Assertions.assertEquals(0, change.deleteRecs().size());
@@ -87,7 +87,7 @@ public class DiffReferenceToDbTest {
             crud.execute("update tab set col_char = 'changed data' where pk_char = '111' and pk_int = 2");
             crud.execute("insert into tab (pk_char, col_char, col_date, pk_int) values ('111', 'test456', current_date, 4)");
 
-            ChangeSet change = reference.delta(crud.fetch("tab", "pk_char = '111'"));
+            ChangeSet change = reference.delta(crud.fetch("tab", "pk_char = '111'"), Collections.emptyList());
             Assertions.assertEquals(1, change.insertRecs().size());
             Assertions.assertEquals(1, change.updateRecs().size());
             Assertions.assertEquals(1, change.deleteRecs().size());

@@ -169,10 +169,6 @@ public class Snapshot {
         return records.isEmpty();
     }
 
-    public ChangeSet delta(Snapshot target) {
-        return delta(target, Collections.emptyList());
-    }
-
     public ChangeSet delta(Snapshot target, List<String> ignoreColumns) {
         if (!table.equalsIgnoreCase(target.table)) throw new RuntimeException("The tables have to have the same name.");
         if (!Arrays.equals(columns, target.columns)) {

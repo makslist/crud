@@ -87,7 +87,7 @@ public class Crud implements AutoCloseable {
         Crud.output = OutPut.getInstance();
         output.userln("Connection established to " + conn.getMetaData().getDatabaseProductName() + " " +
                 conn.getMetaData().getDatabaseMajorVersion() + "." +
-                conn.getMetaData().getDatabaseMinorVersion() + " for schema \"" + this.user + "\"");
+                conn.getMetaData().getDatabaseMinorVersion() + " (user: " + this.user + ")");
     }
 
     public void execute(String sql) throws SQLException {
@@ -140,14 +140,15 @@ public class Crud implements AutoCloseable {
     public boolean existsOrCreate(Snapshot snapshot, boolean createTable) {
         try {
             DatabaseMetaData meta = conn.getMetaData();
-            try (ResultSet resultSet = meta.getTables(null, null, snapshot.getTable().toUpperCase(), new String[]{"TABLE"});) {
+            try (ResultSet resultSet = meta.getTables(null, null, snapshot.getTable().toUpperCase(), new String[]{"TABLE"})) {
                 if (resultSet.next())
                     return true;
                 else if (createTable) {
                     output.info("   Table " + snapshot.getTable() + " does not exist. Trying to create.");
                     String sqlCreate = "create table " + snapshot.getTable() + " (" + snapshot.columns().map(c -> c + " " + (snapshot.getColumnTypes().get(c).getSql())).collect(Collectors.joining(", ")) + ", primary key (" + snapshot.pkColumns().collect(Collectors.joining(", ")) + "))";
                     try (PreparedStatement create = conn.prepareStatement(sqlCreate)) {
-                        return create.execute();
+                        create.execute();
+                        return true;
                     } catch (SQLException ex) {
                         output.error("      Creating table failed with: " + ex.getMessage());
                         output.error("      Statement: " + sqlCreate);
