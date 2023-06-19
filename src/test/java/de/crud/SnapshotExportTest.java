@@ -10,7 +10,7 @@ public class SnapshotExportTest {
 
     private static final OutputStream NULL_OUTPUT_STREAM = new OutputStream() {
         @Override
-        public void write(int i) throws IOException {
+        public void write(int i) {
         }
     };
     Crud crud;

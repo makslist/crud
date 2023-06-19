@@ -168,7 +168,7 @@ public class Crud implements AutoCloseable {
 
     public Snapshot fetch(String table, String whereStmt) throws SQLException {
         String sql = "select * from " + table + (whereStmt != null ? " where " + whereStmt : "");
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+        try (PreparedStatement stmt = conn.prepareStatement(sql, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)) {
             stmt.setFetchSize(1000);
             ResultSet rs = stmt.executeQuery();
             ResultSetMetaData rsmd = rs.getMetaData();
@@ -176,10 +176,12 @@ public class Crud implements AutoCloseable {
 
             Map<String, Snapshot.SqlType> columnTypes = new HashMap<>();
             String[] columns = new String[columnCount];
+            int[] types = new int[columnCount];
             for (int i = 1; i <= columnCount; i++) {
                 String columnName = isMixedCase ? rsmd.getColumnName(i) : rsmd.getColumnName(i).toLowerCase();
-                columnTypes.put(columnName, new Snapshot.SqlType(rsmd.getColumnType(i), rsmd.getPrecision(i), rsmd.getScale(i)));
                 columns[i - 1] = columnName;
+                types[i - 1] = rsmd.getColumnType(i);
+                columnTypes.put(columnName, new Snapshot.SqlType(rsmd.getColumnType(i), rsmd.getPrecision(i), rsmd.getScale(i)));
             }
 
             Snapshot snapshot = new Snapshot(table, columns, columnTypes, descPkOf(table), whereStmt);
@@ -190,13 +192,13 @@ public class Crud implements AutoCloseable {
                 if (rowCount % 100000 == 0)
                     output.userln("   " + rowCount + " rows so far");
                 String[] record = new String[columnCount];
-                for (int i = 1; i <= columnCount; i++) {
-                    switch (rsmd.getColumnType(i)) {
+                for (int i = 1; i <= columnCount; i++)
+                    switch (types[i - 1]) {
+                        case TINYINT:
                         case SMALLINT:
                             short sho = rs.getShort(i);
                             record[i - 1] = rs.wasNull() ? null : String.valueOf(sho);
                             break;
-                        case TINYINT:
                         case INTEGER:
                             int in = rs.getInt(i);
                             record[i - 1] = rs.wasNull() ? null : String.valueOf(in);
@@ -218,10 +220,6 @@ public class Crud implements AutoCloseable {
                         case DOUBLE:
                             double doub = rs.getDouble(i);
                             record[i - 1] = rs.wasNull() ? null : String.valueOf(doub);
-                            break;
-                        case BOOLEAN:
-                            boolean bool = rs.getBoolean(i);
-                            record[i - 1] = rs.wasNull() ? null : String.valueOf(bool);
                             break;
                         case NULL:
                             record[i - 1] = null;
@@ -247,24 +245,50 @@ public class Crud implements AutoCloseable {
                             Blob blob = rs.getBlob(i);
                             record[i - 1] = rs.wasNull() ? null : new String(Base64.getEncoder().encode(blob.getBytes(1L, (int) blob.length())));
                             break;
-                        case OTHER:
-                        case JAVA_OBJECT:
-                        case DISTINCT:
-                        case STRUCT:
-                        case ARRAY:
+                        case BINARY:
+                        case VARBINARY:
+                        case LONGVARBINARY:
+                            // get bytes as last
+                            break;
                         case SQLXML:
                             output.error("Datatype: " + rsmd.getColumnType(i) + " is not supported.");
                             break;
                         case TIME_WITH_TIMEZONE:
                         case TIMESTAMP_WITH_TIMEZONE:
-                        case BINARY:
                         case BIT:
+                        case BOOLEAN:
+                            boolean bool = rs.getBoolean(i);
+                            record[i - 1] = rs.wasNull() ? null : String.valueOf(bool);
+                            break;
+                        case OTHER:
+                        case JAVA_OBJECT:
+                        case ARRAY:
+                        case STRUCT:
+                        case DISTINCT:
+                        case REF:
+                            throw new RuntimeException("ResultSetSerializer not yet implemented for SQL type REF");
+                        case NVARCHAR:
+                        case VARCHAR:
+                        case LONGNVARCHAR:
+                        case LONGVARCHAR:
                         default:
                             String string = rs.getString(i);
                             record[i - 1] = rs.wasNull() ? null : string;
                             break;
                     }
-                }
+
+                for (int i = 1; i <= columnCount; i++)
+                    switch (types[i - 1]) {
+                        case BINARY:
+                        case VARBINARY:
+                        case LONGVARBINARY:
+                            byte[] bytes = rs.getBytes(i);
+                            record[i - 1] = rs.wasNull() ? null : new String(Base64.getEncoder().encode(bytes));
+                            break;
+                        default:
+                            break;
+                    }
+
                 snapshot.addRecord(record);
             }
             return snapshot;

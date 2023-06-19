@@ -2,6 +2,7 @@ package de.crud;
 
 import javax.sql.rowset.serial.*;
 import java.math.*;
+import java.nio.charset.*;
 import java.sql.*;
 import java.util.*;
 import java.util.stream.*;
@@ -52,6 +53,10 @@ public class ChangeSet {
         return insertKeys.stream().map(reference::getRecord).collect(Collectors.toList());
     }
 
+    private Stream<String[]> alignedColumnNames(List<Snapshot.Record> records, int maxWidth) {
+        return records.stream().map(r -> r.columns().map(c -> c.substring(0, Math.min(c.length(), maxWidth))).toArray(String[]::new));
+    }
+
     public boolean isEmpty() {
         return deleteKeys.isEmpty() && updateKeys.isEmpty() && insertKeys.isEmpty();
     }
@@ -59,10 +64,11 @@ public class ChangeSet {
     public void displayDiff(boolean detailed) {
         Map<String, Snapshot.SqlType> colTypes = getReference().getColumnTypes();
 
+        int columnWidth = 12;
         String[] columnNames = getReference().columns().toArray(String[]::new);
-        String recordFormatter = Arrays.stream(columnNames).map(n -> "%" + (alignRight(colTypes.get(n).type) ? "-" : "") + 12 + "s").collect(Collectors.joining(" | "));
+        String recordFormatter = Arrays.stream(columnNames).map(n -> "%" + (alignRight(colTypes.get(n).type) ? "-" : "") + columnWidth + "s").collect(Collectors.joining(" | "));
         String[] keyColumnNames = getReference().pkColumns().toArray(String[]::new);
-        String keyFormatter = Arrays.stream(keyColumnNames).map(n -> "%" + (alignRight(colTypes.get(n).type) ? "-" : "") + 12 + "s").collect(Collectors.joining(" | "));
+        String keyFormatter = Arrays.stream(keyColumnNames).map(n -> "%" + (alignRight(colTypes.get(n).type) ? "-" : "") + columnWidth + "s").collect(Collectors.joining(" | "));
 
         if (insertKeys.isEmpty() && deleteKeys.isEmpty() && updateKeys.isEmpty())
             output.userln("   No differences found.");
@@ -72,7 +78,7 @@ public class ChangeSet {
                 if (!insertKeys.isEmpty()) {
                     output.userln("\n   New Records:");
                     output.userln(String.format(recordFormatter, (Object[]) columnNames));
-                    insertRecs().stream().map(r -> r.columns().toArray(String[]::new)).forEach(c -> output.userln(String.format(recordFormatter, (Object[]) c)));
+                    alignedColumnNames(insertRecs(), columnWidth).forEach(c -> output.userln(String.format(recordFormatter, (Object[]) c)));
                 }
                 if (!deleteKeys.isEmpty()) {
                     output.userln("\n   Delete Records:");
@@ -301,6 +307,18 @@ public class ChangeSet {
                 return "TIME" + "'" + value + "'";
             case TIMESTAMP:
                 return "TIMESTAMP" + "'" + value + "'";
+            case BINARY:
+            case VARBINARY:
+            case LONGVARBINARY:
+                final byte[] HEX_ARRAY = "0123456789ABCDEF".getBytes(StandardCharsets.US_ASCII);
+                byte[] decode = Base64.getDecoder().decode(value.getBytes());
+                byte[] hexChars = new byte[decode.length * 2];
+                for (int j = 0; j < decode.length; j++) {
+                    int v = decode[j] & 0xFF;
+                    hexChars[j * 2] = HEX_ARRAY[v >>> 4];
+                    hexChars[j * 2 + 1] = HEX_ARRAY[v & 0x0F];
+                }
+                return "X'" + new String(hexChars) + "'";
             case NUMERIC:
             case DECIMAL:
             case FLOAT:

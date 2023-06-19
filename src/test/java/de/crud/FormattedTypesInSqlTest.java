@@ -15,7 +15,7 @@ public class FormattedTypesInSqlTest {
         try {
             crud.execute("create table numtypes (pk varchar(3), col2 SMALLINT, col3 TINYINT, col4 INTEGER, col5 BIGINT, col6 NUMERIC, col7 DECIMAL, col8 FLOAT, col9 REAL, col10 DOUBLE, PRIMARY KEY (pk))");
             crud.execute("create table datetypes (pk varchar(3), col12 DATE, col13 TIME, col14 TIMESTAMP, PRIMARY KEY (pk))");
-            crud.execute("create table binarytypes (pk varchar(3), col11 BOOLEAN, col17 BINARY(8), col18 BIT, col20 NULL, PRIMARY KEY (pk))");
+            crud.execute("create table binarytypes (pk varchar(3), col11 BOOLEAN, col17 BINARY(4), col18 BIT, col20 NULL, PRIMARY KEY (pk))");
             crud.execute("create table lobtypes (pk varchar(3), col19 NCLOB, col22 CLOB, col23 BLOB, PRIMARY KEY (pk))");
         } catch (SQLException e) {
             throw new RuntimeException(e);
@@ -71,7 +71,7 @@ public class FormattedTypesInSqlTest {
     @Test
     void insertBinary() {
         try {
-            crud.execute("insert into binarytypes (pk, col11, col17, col18, col20) values ('abc', 1, CAST(X'00000001' AS BINARY(4)), 3, 4)");
+            crud.execute("insert into binarytypes (pk, col11, col17, col18, col20) values ('abc', 1, X'4E8A0110', 3, 4)");
             Snapshot reference = crud.fetch("binarytypes");
             crud.execute("delete binarytypes");
 

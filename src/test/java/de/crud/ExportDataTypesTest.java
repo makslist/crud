@@ -9,7 +9,7 @@ public class ExportDataTypesTest {
 
     private static final OutputStream NULL_OUTPUT_STREAM = new OutputStream() {
         @Override
-        public void write(int i) throws IOException {
+        public void write(int i) {
         }
     };
 
@@ -22,7 +22,7 @@ public class ExportDataTypesTest {
             crud.execute("create table numtypes (pk varchar(3), col2 smallint, col3 tinyint, col4 integer, col5 bigint, col6 numeric, col7 decimal, col8 float, col9 real, col10 double, primary key (pk))");
             crud.execute("create table datetypes (pk varchar(3), col12 date, col13 time, col14 timestamp, primary key (pk))");
             crud.execute("create table binarytypes (pk varchar(3), col11 boolean, col17 binary(8), col18 bit, col20 null, primary key (pk))");
-            crud.execute("create table lobtypes (pk varchar(3), col19 nclob, col22 clob, col23 blob, primary key (pk))");
+            crud.execute("create table lobtypes (pk varchar(3), col19 nclob, col22 clob, col23 blob, col24 raw, primary key (pk))");
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -68,7 +68,7 @@ public class ExportDataTypesTest {
     @Test
     void exportBinary() {
         try {
-            crud.execute("insert into binarytypes (pk, col11, col17, col18, col20) values ('abc', 1, CAST(X'00000001' AS BINARY(4)), 3, 4)");
+            crud.execute("insert into binarytypes (pk, col11, col17, col18, col20) values ('abc', 1, X'00000001', 3, 4)");
             Snapshot rows = crud.fetch("binarytypes", "pk = 'abc'");
             Assertions.assertEquals(1, rows.getRecords().size());
             rows.export(NULL_OUTPUT_STREAM);
@@ -80,7 +80,7 @@ public class ExportDataTypesTest {
     @Test
     void exportLob() {
         try {
-            crud.execute("insert into lobtypes (pk, col19, col22, col23) values ('abc', 1, 2, 3)");
+            crud.execute("insert into lobtypes (pk, col19, col22, col23, col24) values ('abc', 1, 2, 3, 'abcdefghijklmnopqrstuvwxyz0123456789')");
             Snapshot rows = crud.fetch("lobtypes", "pk = 'abc'");
             Assertions.assertEquals(1, rows.getRecords().size());
             rows.export(NULL_OUTPUT_STREAM);
