@@ -18,23 +18,11 @@ public class ExportDataTypesTest {
     @BeforeEach
     void setUp() {
         crud = Crud.connectH2(false);
-        try {
-            crud.execute("create table numtypes (pk varchar(3), col2 smallint, col3 tinyint, col4 integer, col5 bigint, col6 numeric, col7 decimal, col8 float, col9 real, col10 double, primary key (pk))");
-            crud.execute("create table datetypes (pk varchar(3), col12 date, col13 time, col14 timestamp, primary key (pk))");
-            crud.execute("create table binarytypes (pk varchar(3), col11 boolean, col17 binary(8), col18 bit, col20 null, primary key (pk))");
-            crud.execute("create table lobtypes (pk varchar(3), col19 nclob, col22 clob, col23 blob, col24 raw, primary key (pk))");
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     @AfterEach
     void tearDown() {
         try {
-            crud.execute("drop table numtypes");
-            crud.execute("drop table datetypes");
-            crud.execute("drop table binarytypes");
-            crud.execute("drop table lobtypes");
             crud.close();
         } catch (SQLException e) {
             throw new RuntimeException(e);
@@ -44,10 +32,12 @@ public class ExportDataTypesTest {
     @Test
     void exportNumbers() {
         try {
-            crud.execute("insert into numtypes (pk, col2, col3, col4, col5, col6, col7, col8, col9, col10) values ('abc', 1, 2, 3, 1, 5, 6, 7, 8, 9)");
+            crud.execute("create table numtypes (pk varchar(3), col1 smallint, col2 tinyint, col3 integer, col4 bigint, col5 numeric, col6 decimal, col7 float, col8 real, col9 double, primary key (pk))");
+            crud.execute("insert into numtypes (pk, col1, col2, col3, col4, col5, col6, col7, col8, col9) values ('abc', 1, 2, 3, 1, 5, 6, 7, 8, 9)");
             Snapshot rows = crud.fetch("numtypes", "pk = 'abc'");
             Assertions.assertEquals(1, rows.getRecords().size());
             rows.export(NULL_OUTPUT_STREAM);
+            crud.execute("drop table numtypes");
         } catch (SQLException | IOException e) {
             throw new RuntimeException(e);
         }
@@ -56,10 +46,12 @@ public class ExportDataTypesTest {
     @Test
     void exportDate() {
         try {
-            crud.execute("insert into datetypes (pk, col12, col13, col14) values ('abc', CURRENT_DATE, CURRENT_TIME, CURRENT_DATE)");
+            crud.execute("create table datetypes (pk varchar(3), col11 date, col12 time, col13 timestamp, primary key (pk))");
+            crud.execute("insert into datetypes (pk, col11, col12, col13) values ('abc', CURRENT_DATE, CURRENT_TIME, CURRENT_DATE)");
             Snapshot rows = crud.fetch("datetypes", "pk = 'abc'");
             Assertions.assertEquals(1, rows.getRecords().size());
             rows.export(NULL_OUTPUT_STREAM);
+            crud.execute("drop table datetypes");
         } catch (SQLException | IOException e) {
             throw new RuntimeException(e);
         }
@@ -68,10 +60,12 @@ public class ExportDataTypesTest {
     @Test
     void exportBinary() {
         try {
-            crud.execute("insert into binarytypes (pk, col11, col17, col18, col20) values ('abc', 1, X'00000001', 3, 4)");
+            crud.execute("create table binarytypes (pk varchar(3), col21 boolean, col22 binary(8), col23 bit, col24 null, primary key (pk))");
+            crud.execute("insert into binarytypes (pk, col21, col22, col23, col24) values ('abc', 1, X'00000001', 3, null)");
             Snapshot rows = crud.fetch("binarytypes", "pk = 'abc'");
             Assertions.assertEquals(1, rows.getRecords().size());
             rows.export(NULL_OUTPUT_STREAM);
+            crud.execute("drop table binarytypes");
         } catch (SQLException | IOException e) {
             throw new RuntimeException(e);
         }
@@ -80,10 +74,26 @@ public class ExportDataTypesTest {
     @Test
     void exportLob() {
         try {
-            crud.execute("insert into lobtypes (pk, col19, col22, col23, col24) values ('abc', 1, 2, 3, 'abcdefghijklmnopqrstuvwxyz0123456789')");
+            crud.execute("create table lobtypes (pk varchar(3), col31 nclob, col32 clob, col33 blob, primary key (pk))");
+            crud.execute("insert into lobtypes (pk, col31, col32, col33) values ('abc', 1, 2, 3)");
             Snapshot rows = crud.fetch("lobtypes", "pk = 'abc'");
             Assertions.assertEquals(1, rows.getRecords().size());
             rows.export(NULL_OUTPUT_STREAM);
+            crud.execute("drop table lobtypes");
+        } catch (SQLException | IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Test
+    void exportRaw() {
+        try {
+            crud.execute("create table raws (pk varchar(3), col41 raw, primary key (pk))");
+            crud.execute("insert into raws (pk, col41) values ('abc', X'00000001')");
+            Snapshot rows = crud.fetch("raws", "pk = 'abc'");
+            Assertions.assertEquals(1, rows.getRecords().size());
+            rows.export(NULL_OUTPUT_STREAM);
+            crud.execute("drop table raws");
         } catch (SQLException | IOException e) {
             throw new RuntimeException(e);
         }

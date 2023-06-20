@@ -188,10 +188,26 @@ public class Crud implements AutoCloseable {
 
             long rowCount = 0;
             while (rs.next()) {
-                rowCount++;
-                if (rowCount % 100000 == 0)
+                if (++rowCount % 100000 == 0)
                     output.userln("   " + rowCount + " rows so far");
                 String[] record = new String[columnCount];
+
+                for (int i = 1; i <= columnCount; i++)
+                    switch (types[i - 1]) {
+                        case BINARY:
+                        case VARBINARY:
+                        case LONGVARBINARY:
+                            try {
+                                byte[] bytes = rs.getBytes(i);
+                                record[i - 1] = rs.wasNull() ? null : new String(Base64.getEncoder().encode(bytes));
+                            } catch (SQLException e) {
+                                record[i - 1] = null;
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+
                 for (int i = 1; i <= columnCount; i++)
                     switch (types[i - 1]) {
                         case TINYINT:
@@ -274,18 +290,6 @@ public class Crud implements AutoCloseable {
                         default:
                             String string = rs.getString(i);
                             record[i - 1] = rs.wasNull() ? null : string;
-                            break;
-                    }
-
-                for (int i = 1; i <= columnCount; i++)
-                    switch (types[i - 1]) {
-                        case BINARY:
-                        case VARBINARY:
-                        case LONGVARBINARY:
-                            byte[] bytes = rs.getBytes(i);
-                            record[i - 1] = rs.wasNull() ? null : new String(Base64.getEncoder().encode(bytes));
-                            break;
-                        default:
                             break;
                     }
 
