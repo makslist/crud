@@ -10,7 +10,6 @@ import java.math.*;
 import java.nio.file.*;
 import java.text.*;
 import java.util.*;
-import java.util.function.*;
 import java.util.stream.*;
 
 import static java.sql.Types.*;
@@ -18,10 +17,7 @@ import static java.sql.Types.*;
 public class Snapshot {
 
     public static final String TABLE = "table";
-    public static final String COLUMNS = "columns";
     public static final String WHERE = "where";
-    public static final String COLUMN_TYPES = "columnTypes";
-    public static final String PRIMARY_KEY = "primaryKey";
     public static final String RECORDS = "records";
 
     private static final ObjectMapper MAPPER = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT).configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
@@ -43,12 +39,8 @@ public class Snapshot {
         return reader.readValue(file, Snapshot.class);
     }
 
-    private String table;
-    private String[] columns;
-    private Map<String, Integer> columnIndex;
-    private Map<String, SqlType> columnTypes;
-    private Key pk;
-    private List<Integer> pkIndices;
+    private TableMeta table;
+
     private String where;
     private List<Record> records = new ArrayList<>();
     private final Map<Key, Record> index = new HashMap<>();
@@ -56,37 +48,21 @@ public class Snapshot {
     public Snapshot() {
     }
 
-    public Snapshot(String table, String[] columns, Map<String, SqlType> columnTypes, List<String> pkColumns, String where) {
+    public Snapshot(TableMeta table, String where) {
         this.table = table;
-        this.columns = columns;
-        this.columnIndex = columnIndex();
-        this.columnTypes = columnTypes;
-        this.pk = new Key(pkColumns.stream().sorted((k1, k2) -> columnIndex().get(k1) - columnIndex().get(k2)).collect(Collectors.toList()));
-        this.pkIndices = pk.columns().map(columnIndex()::get).collect(Collectors.toList());
         this.where = where;
     }
 
-    private Map<String, Integer> columnIndex() {
-        if (this.columnIndex == null)
-            this.columnIndex = IntStream.rangeClosed(0, this.columns.length - 1).boxed().collect(Collectors.toMap(i -> this.columns[i], Function.identity()));
-        return this.columnIndex;
+    public TableMeta getTable() {
+        return table;
     }
 
-    @JsonProperty(COLUMNS)
-    public void setColumns(String[] columns) {
-        this.columns = columns;
-        if (this.pk != null && this.pkIndices == null)
-            this.pk = new Key(this.pk.columns().sorted((k1, k2) -> columnIndex().get(k1) - columnIndex().get(k2)).toArray(String[]::new));
+    public String getTableName() {
+        return table.name;
     }
 
-    public Stream<String> columns() {
-        return Arrays.stream(columns);
-    }
-
-    public List<Integer> pkIndex() {
-        if (this.pkIndices == null)
-            this.pkIndices = pk.columns().map(columnIndex()::get).collect(Collectors.toList());
-        return this.pkIndices;
+    public Stream<String> columnNames() {
+        return table.columns.stream().map(c -> c.name);
     }
 
     public Stream<Key> keys() {
@@ -101,10 +77,6 @@ public class Snapshot {
         return index.get(key);
     }
 
-    public String getTable() {
-        return table;
-    }
-
     public String getWhere() {
         return where;
     }
@@ -114,33 +86,12 @@ public class Snapshot {
         this.where = where;
     }
 
-    public Map<String, SqlType> getColumnTypes() {
-        return this.columnTypes;
-    }
-
-    @JsonProperty(COLUMN_TYPES)
-    public void setColumnTypes(Map<String, SqlType> columnTypes) {
-        this.columnTypes = new HashMap<>();
-        this.columnTypes.putAll(columnTypes);
-    }
-
-    public Key getPk() {
-        return pk;
-    }
-
     public Stream<String> pkColumns() {
-        return IntStream.range(0, columns.length).filter(i -> pkIndex().contains(i)).mapToObj(i -> columns[i]);
+        return table.primaryKey.columnNames.stream();
     }
 
     public Stream<String> nonPkColumns() {
-        return IntStream.range(0, columns.length).filter(i -> !pkIndex().contains(i)).mapToObj(i -> columns[i]);
-    }
-
-    @JsonProperty(PRIMARY_KEY)
-    public void setPkColumns(String[] columns) {
-        this.pk = new Key(columns);
-        if (columnIndex() != null)
-            this.pk = new Key(Stream.of(columns).sorted((k1, k2) -> columnIndex().get(k1) - columnIndex().get(k2)).toArray(String[]::new));
+        return table.columns.stream().map(c -> c.name).filter(c -> pkColumns().noneMatch(c::equals));
     }
 
     public List<Record> getRecords() {
@@ -158,9 +109,10 @@ public class Snapshot {
     }
 
     public void addRecord(String[] record) {
-        Record rec = new Record(this, record);
-        if (columns.length != rec.size()) throw new RuntimeException("Column count is different.");
+        if (table.columns.size() != record.length)
+            throw new RuntimeException("Column count is different.");
 
+        Record rec = new Record(this, record);
         records.add(rec);
         index.put(rec.key(), rec);
     }
@@ -170,11 +122,12 @@ public class Snapshot {
     }
 
     public ChangeSet delta(Snapshot target, List<String> ignoreColumns) {
-        if (!table.equalsIgnoreCase(target.table)) throw new RuntimeException("The tables have to have the same name.");
-        if (!Arrays.equals(columns, target.columns)) {
+        if (!table.name.equalsIgnoreCase(target.table.name))
+            throw new RuntimeException("The tables have to have the same name.");
+        if (!table.columns.equals(target.table.columns)) {
             System.out.println("   The columns names and positions have to be identical.");
-            System.out.println("   Reference order: " + Arrays.toString(columns));
-            System.out.println("   Found: " + Arrays.toString(target.columns));
+            System.out.println("   Reference order: " + table.columns.stream().map(c -> c.name).collect(Collectors.joining(", ")));
+            System.out.println("   Found: " + target.table.columns.stream().map(c -> c.name).collect(Collectors.joining(", ")));
         }
 
         List<Snapshot.Key> deleteKeys = target.keys().filter(r -> !containedInIndex(r)).collect(Collectors.toList());
@@ -190,14 +143,14 @@ public class Snapshot {
                 throw new RuntimeException("PrimaryKey columns can not be ignored.");
 
         if (!ignoreColumns.isEmpty()) {
-            boolean[] useColumn = new boolean[columns.length];
-            columns().forEach(c -> useColumn[columnIndex().get(c)] = !ignoreColumns.contains(c));
+            boolean[] useColumn = new boolean[table.columns.size()];
+            columnNames().forEach(c -> useColumn[table.columnIndex.get(c)] = !ignoreColumns.contains(c));
             return useColumn;
         } else return null;
     }
 
     public void export(List<String> groupBy, File path) throws IOException {
-        if (!groupBy.stream().allMatch(g -> columns().anyMatch(g::equalsIgnoreCase)))
+        if (!groupBy.stream().allMatch(g -> columnNames().anyMatch(g::equalsIgnoreCase)))
             throw new RuntimeException("Column does not exist in table.");
 
         Map<List<String>, List<Snapshot.Record>> groups = records.stream().collect(Collectors.groupingBy(rec -> groupBy.stream().map(rec::column).collect(Collectors.toList())));
@@ -207,7 +160,7 @@ public class Snapshot {
             if (where != null) whereGrp.add(where);
 
             IntStream.range(0, group.getKey().size()).mapToObj(i -> groupBy.get(i) + " = " + group.getKey().get(i)).forEach(whereGrp::add);
-            StringJoiner filename = new StringJoiner("_", "", ".snapshot").add(getTable()).add(String.join("_", group.getKey()));
+            StringJoiner filename = new StringJoiner("_", "", ".snapshot").add(getTableName()).add(String.join("_", group.getKey()));
             export(Files.newOutputStream(new File(path, filename.toString()).toPath()), whereGrp.toString(), group.getValue());
         }
     }
@@ -218,49 +171,37 @@ public class Snapshot {
 
     private void export(OutputStream out, String whereStmt, List<Record> recs) throws IOException {
         ObjectNode root = MAPPER.createObjectNode();
-        root.put(TABLE, this.table);
-        columns().forEach(root.putArray(COLUMNS)::add);
-
-        ObjectNode colTypes = MAPPER.createObjectNode();
-        for (Map.Entry<String, SqlType> entry : this.columnTypes.entrySet()) {
-            ObjectNode type = MAPPER.createObjectNode();
-            type.put("type", entry.getValue().type);
-            type.put("precision", entry.getValue().precision);
-            type.put("scale", entry.getValue().scale);
-            colTypes.putIfAbsent(entry.getKey(), type);
-        }
-        root.putIfAbsent(COLUMN_TYPES, colTypes);
-
-        this.pk.columns().forEach(root.putArray(PRIMARY_KEY)::add);
+        root.putPOJO(TABLE, this.table);
         root.put(WHERE, whereStmt);
 
         ArrayNode rows = root.putArray(RECORDS);
         for (Record r : recs) {
             ObjectNode node = MAPPER.createObjectNode();
-            for (int i = 0; i < columns.length; i++) {
+            for (int i = 0; i < table.columns.size(); i++) {
                 String value = r.columns[i];
-                switch (this.columnTypes.get(columns[i]).type) {
+                TableMeta.Column column = table.columns.get(i);
+                switch (column.datatype) {
                     case TINYINT:
                     case INTEGER:
-                        node.put(columns[i], value != null ? Integer.valueOf(value) : null);
+                        node.put(column.name, value != null ? Integer.valueOf(value) : null);
                         break;
                     case SMALLINT:
-                        node.put(columns[i], value != null ? Short.valueOf(value) : null);
+                        node.put(column.name, value != null ? Short.valueOf(value) : null);
                         break;
                     case BIGINT:
-                        node.put(columns[i], value != null ? new BigInteger(value) : null);
+                        node.put(column.name, value != null ? new BigInteger(value) : null);
                         break;
                     case FLOAT:
-                        node.put(columns[i], value != null ? Float.valueOf(value) : null);
+                        node.put(column.name, value != null ? Float.valueOf(value) : null);
                         break;
                     case REAL:
                     case DOUBLE:
-                        node.put(columns[i], value != null ? Double.valueOf(value) : null);
+                        node.put(column.name, value != null ? Double.valueOf(value) : null);
                         break;
                     case BIT:
                     case NULL:
                     default:
-                        node.put(columns[i], value);
+                        node.put(column.name, value);
                         break;
                 }
             }
@@ -270,139 +211,9 @@ public class Snapshot {
         OBJECT_WRITER.writeValue(out, root);
     }
 
-    public static class SqlType {
-
-        int type;
-        int precision;
-
-        int scale;
-
-        public SqlType() {
-        }
-
-        public SqlType(int type, int precision, int scale) {
-            this.type = type;
-            this.precision = precision;
-            this.scale = scale;
-        }
-
-        public int getType() {
-            return type;
-        }
-
-        public void setType(int type) {
-            this.type = type;
-        }
-
-        public int getPrecision() {
-            return precision;
-        }
-
-        public void setPrecision(int precision) {
-            this.precision = precision;
-        }
-
-        public int getScale() {
-            return scale;
-        }
-
-        public void setScale(int scale) {
-            this.scale = scale;
-        }
-
-        public String getSql() {
-            switch (type) {
-                case BIT:
-                    return "bit";
-                case TINYINT:
-                    return "tinyint";
-                case SMALLINT:
-                    return "smallint";
-                case INTEGER:
-                    return "integer";
-                case BIGINT:
-                    return "bigint";
-                case FLOAT:
-                    return "float";
-                case REAL:
-                    return "real";
-                case DOUBLE:
-                    return "double";
-                case NUMERIC:
-                    return String.format("numeric%s", precision == 0 ? "" : String.format(" (%d%s)", precision, (scale != 0 && scale != -127) ? ", " + scale : ""));
-                case DECIMAL:
-                    return "decimal";
-                case CHAR:
-                    return "char";
-                case VARCHAR:
-                    return "varchar(" + precision + ")";
-                case LONGVARCHAR:
-                    return "longvarchar";
-                case DATE:
-                    return "date";
-                case TIME:
-                    return "time";
-                case TIMESTAMP:
-                    return "timestamp";
-                case BINARY:
-                    return "binary";
-                case VARBINARY:
-                    return "varbinary";
-                case LONGVARBINARY:
-                    return "longvarbinary";
-                case NULL:
-                    return "null";
-                case OTHER:
-                    return "other";
-                case JAVA_OBJECT:
-                    return "java_object";
-                case DISTINCT:
-                    return "distinct";
-                case STRUCT:
-                    return "struct";
-                case ARRAY:
-                    return "array";
-                case BLOB:
-                    return "blob";
-                case CLOB:
-                    return "clob";
-                case REF:
-                    return "ref";
-                case DATALINK:
-                    return "datalink";
-                case BOOLEAN:
-                    return "boolean";
-                case ROWID:
-                    return "rowid";
-                case NCHAR:
-                    return "nchar";
-                case NVARCHAR:
-                    return "nvarchar";
-                case LONGNVARCHAR:
-                    return "longnvarchar";
-                case NCLOB:
-                    return "nclob";
-                case SQLXML:
-                    return "sqlxml";
-                case REF_CURSOR:
-                    return "ref_cursor";
-                case TIME_WITH_TIMEZONE:
-                    return "time_with_timezone";
-                case TIMESTAMP_WITH_TIMEZONE:
-                    return "timestamp_with_timezone";
-                default:
-                    throw new IllegalStateException("Unexpected value: " + type);
-            }
-        }
-    }
-
     public static class Key {
 
         private final String[] columns;
-
-        public Key(List<String> columns) {
-            this.columns = columns.toArray(new String[0]);
-        }
 
         public Key(String[] columns) {
             this.columns = columns;
@@ -442,33 +253,35 @@ public class Snapshot {
         }
 
         public String column(String name) {
-            return columns[snapshot.columnIndex().get(name)];
+            return columns[snapshot.table.columnIndex.get(name)];
         }
 
         public Stream<String> columns() {
             return Arrays.stream(columns);
         }
 
-        public Integer columnType(String name) {
-            return snapshot.getColumnTypes().get(name).type;
+        public int columnType(String name) {
+            return snapshot.table.columns.get(snapshot.table.columnIndex.get(name)).datatype;
         }
 
         public Key key() {
-            return new Key(snapshot.pkIndex().stream().map(i -> columns[i]).collect(Collectors.toList()));
+            //TODO
+            String[] keyElems = new String[snapshot.table.primaryKey.columnCount];
+//            System.arraycopy(columns, 0, keyElems, 0, snapshot.table.primaryKeys.size());
+//            return new Key(keyElems);
+
+            int idx = 0;
+            for (int i : snapshot.table.primaryKey.getPkIndices())
+                keyElems[idx++] = columns[i];
+            return new Key(keyElems);
         }
 
         public boolean equals(Record comp, boolean[] useColumn) {
-            for (int i = 0; i < columns.length; i++) {
-                if (useColumn != null && !useColumn[i])
-                    continue;
-                if (!Objects.equals(columns[i], comp.columns[i]))
+            for (int i = 0; i < columns.length; i++)
+                if ((useColumn == null || useColumn[i]) && !Objects.equals(columns[i], comp.columns[i]))
                     return false;
-            }
-            return true;
-        }
 
-        public int size() {
-            return columns.length;
+            return true;
         }
 
         public String toString() {

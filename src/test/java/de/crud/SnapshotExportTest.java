@@ -3,6 +3,7 @@ package de.crud;
 import org.junit.jupiter.api.*;
 
 import java.io.*;
+import java.nio.file.*;
 import java.sql.*;
 import java.util.*;
 
@@ -51,11 +52,32 @@ public class SnapshotExportTest {
     }
 
     @Test
+    void tableMetaData() {
+        try {
+            TableMeta meta = crud.tableMetaData("tab");
+            Assertions.assertEquals("tab", meta.name);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Test
     void fetchSnapshotFull() {
         try {
             Snapshot rows = crud.fetch("tab", "pk_char = '111'");
             Assertions.assertEquals(3, rows.getRecords().size());
             rows.export(NULL_OUTPUT_STREAM);
+        } catch (SQLException | IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Test
+    void exportSnapshotFull() {
+        try {
+            Snapshot rows = crud.fetch("tab", "pk_char = '111'");
+            Assertions.assertEquals(3, rows.getRecords().size());
+            rows.export(Files.newOutputStream(new File("./tab.snapshot").toPath()));
         } catch (SQLException | IOException e) {
             throw new RuntimeException(e);
         }

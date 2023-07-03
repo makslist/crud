@@ -140,7 +140,7 @@ public class Starter {
     private static void compareFile(File file, Config config, OutPut output, Crud crud) throws IOException {
         output.user("Comparing reference file " + file);
         Snapshot reference = Snapshot.read(file);
-        output.userln(" (" + reference.getRecords().size() + " records) to table " + reference.getTable() + (reference.getWhere() != null ? " with condition " + reference.getWhere() : ""));
+        output.userln(" (" + reference.getRecords().size() + " records) to table " + reference.getTableName() + (reference.getWhere() != null ? " with condition " + reference.getWhere() : ""));
 
         if (crud.existsOrCreate(reference, false))
             try {
@@ -151,14 +151,14 @@ public class Starter {
                 e.printStackTrace();
             }
         else if (reference.isEmpty())
-            output.userln("   Reference is empty and table does not exist. Table could be dropped: 'drop table " + reference.getTable() + "';");
+            output.userln("   Reference is empty and table does not exist. Table could be dropped: 'drop table " + reference.getTableName() + "';");
         else
-            output.error("   Error: Table " + reference.getTable() + " does not exist!");
+            output.error("   Error: Table " + reference.getTableName() + " does not exist!");
     }
 
     private static void importFile(File file, Config config, Crud crud, OutPut output) throws IOException {
         Snapshot reference = Snapshot.read(file);
-        output.userln("Importing reference data from " + file + " into table " + reference.getTable() + (reference.getWhere() != null ? " with condition " + reference.getWhere() : ""));
+        output.userln("Importing reference data from " + file + " into table " + reference.getTableName() + (reference.getWhere() != null ? " with condition " + reference.getWhere() : ""));
 
         if (crud.existsOrCreate(reference, !reference.isEmpty() && config.isForceInsert()))
             try {
@@ -177,7 +177,7 @@ public class Starter {
         else if (reference.isEmpty())
             output.error("   Reference is empty but table still exists!");
         else
-            output.error("   Error: Table " + reference.getTable() + " does not exist!");
+            output.error("   Error: Table " + reference.getTableName() + " does not exist!");
     }
 
     private static void writeUndoLogs(String table, List<String> sqlUndoStmt) throws IOException {

@@ -1,0 +1,72 @@
+{
+  "table" : "tab",
+  "columns" : [
+    "pk_char",
+    "col_char",
+    "col_date",
+    "pk_int",
+    "col_time"
+  ],
+  "columnTypes" : {
+    "pk_char" : {
+      "type" : 12,
+      "precision" : 3,
+      "scale" : 0
+    },
+    "col_char" : {
+      "type" : 12,
+      "precision" : 30,
+      "scale" : 0
+    },
+    "col_date" : {
+      "type" : 91,
+      "precision" : 10,
+      "scale" : 0
+    },
+    "pk_int" : {
+      "type" : 4,
+      "precision" : 32,
+      "scale" : 0
+    },
+    "col_time" : {
+      "type" : 92,
+      "precision" : 8,
+      "scale" : 0
+    }
+  },
+  "primaryKey" : [
+    "pk_char",
+    "pk_int"
+  ],
+  "where" : "pk_char = test123",
+  "records" : [
+    {
+      "pk_char" : "111",
+      "col_char" : "test123",
+      "col_date" : "2023-06-27",
+      "pk_int" : 1,
+      "col_time" : "18:48:42"
+    },
+    {
+      "pk_char" : "111",
+      "col_char" : "test123",
+      "col_date" : "2023-06-27",
+      "pk_int" : 2,
+      "col_time" : "18:48:42"
+    },
+    {
+      "pk_char" : "111",
+      "col_char" : "test123",
+      "col_date" : "2023-06-27",
+      "pk_int" : 3,
+      "col_time" : "18:48:42"
+    },
+    {
+      "pk_char" : "222",
+      "col_char" : "test123",
+      "col_date" : "2023-06-27",
+      "pk_int" : 1,
+      "col_time" : "18:48:42"
+    }
+  ]
+}

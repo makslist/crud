@@ -18,7 +18,6 @@ public class InsertWithCreateTableTest {
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
-
     }
 
     @AfterEach

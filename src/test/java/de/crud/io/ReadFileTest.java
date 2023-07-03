@@ -10,7 +10,7 @@ public class ReadFileTest {
     @Test
     void readFile() {
         try {
-            Snapshot.read(new File("./test.snapshot"));
+            Snapshot.read(new File("./tab.snapshot"));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

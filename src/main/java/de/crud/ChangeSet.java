@@ -38,7 +38,7 @@ public class ChangeSet {
     }
 
     public String table() {
-        return target.getTable();
+        return target.getTableName();
     }
 
     public List<Snapshot.Record> deleteRecs() {
@@ -62,13 +62,11 @@ public class ChangeSet {
     }
 
     public void displayDiff(boolean detailed) {
-        Map<String, Snapshot.SqlType> colTypes = getReference().getColumnTypes();
-
         int columnWidth = 12;
-        String[] columnNames = getReference().columns().toArray(String[]::new);
-        String recordFormatter = Arrays.stream(columnNames).map(n -> "%" + (alignRight(colTypes.get(n).type) ? "-" : "") + columnWidth + "s").collect(Collectors.joining(" | "));
+        String[] columnNames = getReference().columnNames().toArray(String[]::new);
+        String recordFormatter = getReference().getTable().columns.stream().map(c -> "%" + (alignRight(c.datatype) ? "-" : "") + columnWidth + "s").collect(Collectors.joining(" | "));
         String[] keyColumnNames = getReference().pkColumns().toArray(String[]::new);
-        String keyFormatter = Arrays.stream(keyColumnNames).map(n -> "%" + (alignRight(colTypes.get(n).type) ? "-" : "") + columnWidth + "s").collect(Collectors.joining(" | "));
+        String keyFormatter = getReference().getTable().getPkColumns().map(n -> "%" + (alignRight(n.datatype) ? "-" : "") + columnWidth + "s").collect(Collectors.joining(" | "));
 
         if (insertKeys.isEmpty() && deleteKeys.isEmpty() && updateKeys.isEmpty())
             output.userln("   No differences found.");
@@ -99,10 +97,10 @@ public class ChangeSet {
 
     public void applyInsert(Connection conn, boolean continueOnError) {
         Snapshot ref = getReference();
-        List<String> columns = ref.columns().collect(Collectors.toList());
+        List<String> columns = ref.columnNames().collect(Collectors.toList());
         String cols = columns.stream().collect(Collectors.joining(", ", " (", ")"));
         String values = columns.stream().map(c -> "?").collect(Collectors.joining(", ", " values (", ")"));
-        String sql = "insert into " + ref.getTable() + cols + values;
+        String sql = "insert into " + ref.getTableName() + cols + values;
 
         for (Snapshot.Record rec : insertRecs()) {
             try {
@@ -124,8 +122,8 @@ public class ChangeSet {
     public void applyUpdate(Connection conn, boolean continueOnError) {
         Snapshot ref = getReference();
         String set = ref.nonPkColumns().map(s -> s + " = ?").collect(Collectors.joining(", ", " set ", ""));
-        String where = ref.getPk().columns().map(c -> c + " = ?").collect(Collectors.joining(" and ", " where ", ""));
-        String sql = "update " + ref.getTable() + set + where;
+        String where = ref.getTable().getPkColumns().map(c -> c.name + " = ?").collect(Collectors.joining(" and ", " where ", ""));
+        String sql = "update " + ref.getTableName() + set + where;
 
         List<String> nonPkColumns = ref.nonPkColumns().collect(Collectors.toList());
         List<String> pkColumns = ref.pkColumns().collect(Collectors.toList());
@@ -150,8 +148,8 @@ public class ChangeSet {
 
     public void applyDelete(Connection conn, boolean continueOnError) {
         Snapshot ref = getReference();
-        String where = ref.getPk().columns().map(c -> c + " = ?").collect(Collectors.joining(" and ", " where ", ""));
-        String sql = "delete " + ref.getTable() + where;
+        String where = ref.getTable().getPkColumns().map(c -> c.name + " = ?").collect(Collectors.joining(" and ", " where ", ""));
+        String sql = "delete " + ref.getTableName() + where;
 
         List<String> pkColumns = ref.pkColumns().collect(Collectors.toList());
         for (Snapshot.Record rec : deleteRecs()) {
@@ -267,19 +265,19 @@ public class ChangeSet {
     }
 
     private List<String> deleteSqlStmt(Snapshot snpSht, List<Snapshot.Record> records) {
-        String sql = "delete " + snpSht.getTable();
+        String sql = "delete " + snpSht.getTableName();
         List<String> stmts = new ArrayList<>();
         for (Snapshot.Record rec : records) {
-            String delete = sql + snpSht.getPk().columns().map(c -> c + " = " + formatSqlDataType(rec.columnType(c), rec.column(c))).collect(Collectors.joining(" and ", " where ", "")) + ";";
+            String delete = sql + snpSht.getTable().getPkColumns().map(c -> c.name + " = " + formatSqlDataType(c.datatype, rec.column(c.name))).collect(Collectors.joining(" and ", " where ", "")) + ";";
             stmts.add(delete);
         }
         return stmts;
     }
 
     private List<String> insertSqlStmt(Snapshot snpSht, List<Snapshot.Record> records) {
-        String sql = "insert into " + snpSht.getTable();
+        String sql = "insert into " + snpSht.getTableName();
         List<String> stmts = new ArrayList<>();
-        List<String> columns = snpSht.columns().collect(Collectors.toList());
+        List<String> columns = snpSht.columnNames().collect(Collectors.toList());
         for (Snapshot.Record rec : records) {
             String cols = columns.stream().collect(Collectors.joining(", ", " (", ")"));
             String values = columns.stream().map(c -> formatSqlDataType(rec.columnType(c), rec.column(c))).collect(Collectors.joining(", ", " values (", ")"));
@@ -289,11 +287,11 @@ public class ChangeSet {
     }
 
     private List<String> updateSqlStmt(Snapshot snpSht, List<Snapshot.Record> records) {
-        String sql = "update " + snpSht.getTable();
+        String sql = "update " + snpSht.getTableName();
         List<String> stmts = new ArrayList<>();
         for (Snapshot.Record rec : records) {
             String set = snpSht.nonPkColumns().map(c -> c + " = " + formatSqlDataType(rec.columnType(c), rec.column(c))).collect(Collectors.joining(", ", " set ", ""));
-            String where = snpSht.getPk().columns().map(c -> c + " = " + rec.column(c)).collect(Collectors.joining(" and ", " where ", ""));
+            String where = snpSht.getTable().getPkColumns().map(c -> c.name + " = " + rec.column(c.name)).collect(Collectors.joining(" and ", " where ", ""));
             stmts.add(sql + set + where + ";");
         }
         return stmts;

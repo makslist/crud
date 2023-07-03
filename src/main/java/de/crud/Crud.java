@@ -8,7 +8,6 @@ import java.sql.*;
 import java.text.*;
 import java.util.Date;
 import java.util.*;
-import java.util.stream.*;
 
 import static java.sql.Types.*;
 
@@ -108,7 +107,54 @@ public class Crud implements AutoCloseable {
         ResultSet tables = metaData.getTables(null, user.toUpperCase(), pattern == null || pattern.isEmpty() ? "%" : pattern.toUpperCase(), types);
         while (tables.next())
             result.add(tables.getString("TABLE_NAME"));
+//        String remarks = resultSet.getString("REMARKS");
         return result;
+    }
+
+    public TableMeta tableMetaData(String tableName) throws SQLException {
+        DatabaseMetaData metaData = conn.getMetaData();
+        String tableRemarks = null;
+        try (ResultSet resultSet = metaData.getTables(null, null, tableName.toUpperCase(), new String[]{"TABLE"})) {
+            while (resultSet.next())
+                tableRemarks = resultSet.getString("REMARKS");
+        }
+
+        List<TableMeta.Column> columns = new ArrayList<>();
+        try (ResultSet column = metaData.getColumns(null, null, tableName.toUpperCase(), null)) {
+            while (column.next()) {
+                int position = column.getInt("ORDINAL_POSITION");
+                String columnName = column.getString("COLUMN_NAME").toLowerCase();
+                String remarks = column.getString("REMARKS");
+                int datatype = column.getInt("DATA_TYPE");
+                int columnSize = column.getInt("COLUMN_SIZE");
+                int decimalDigits = column.getInt("DECIMAL_DIGITS");
+                boolean isNullable = "YES".equals(column.getString("IS_NULLABLE"));
+                boolean isAutoIncrement = "YES".equals(column.getString("IS_AUTOINCREMENT"));
+                String defaultValue = column.getString("COLUMN_DEF");
+                columns.add(new TableMeta.Column(position, columnName, remarks, datatype, columnSize, decimalDigits, isNullable, isAutoIncrement, defaultValue));
+            }
+        }
+
+        TableMeta.PrimaryKey pk;
+        try (ResultSet primaryKeys = metaData.getPrimaryKeys(null, null, tableName.toUpperCase())) {
+            String primaryKeyName = null;
+            List<String> pkColumns = new ArrayList<>();
+            while (primaryKeys.next()) {
+                primaryKeyName = primaryKeys.getString("PK_NAME");
+                pkColumns.add(primaryKeys.getString("COLUMN_NAME").toLowerCase());
+            }
+            pk = new TableMeta.PrimaryKey(primaryKeyName.toLowerCase(), pkColumns);
+        }
+//        try (ResultSet foreignKeys = metaData.getImportedKeys(null, null, tableName.toUpperCase())) {
+//            while (foreignKeys.next()) {
+//                String pkTableName = foreignKeys.getString("PKTABLE_NAME");
+//                String fkTableName = foreignKeys.getString("FKTABLE_NAME");
+//                String pkColumnName = foreignKeys.getString("PKCOLUMN_NAME");
+//                String fkColumnName = foreignKeys.getString("FKCOLUMN_NAME");
+//            }
+//        }
+
+        return new TableMeta(tableName, tableRemarks, columns, pk, Collections.emptyList());
     }
 
     public List<String> descPkOf(String table) throws SQLException {
@@ -133,25 +179,24 @@ public class Crud implements AutoCloseable {
     }
 
     public ChangeSet delta(Snapshot snapshot, List<String> ignoreColumns) throws SQLException {
-        Snapshot current = fetch(snapshot.getTable(), snapshot.getWhere());
+        Snapshot current = fetch(snapshot.getTableName(), snapshot.getWhere());
         return snapshot.delta(current, ignoreColumns);
     }
 
     public boolean existsOrCreate(Snapshot snapshot, boolean createTable) {
         try {
             DatabaseMetaData meta = conn.getMetaData();
-            try (ResultSet resultSet = meta.getTables(null, null, snapshot.getTable().toUpperCase(), new String[]{"TABLE"})) {
+            try (ResultSet resultSet = meta.getTables(null, null, snapshot.getTableName().toUpperCase(), new String[]{"TABLE"})) {
                 if (resultSet.next())
                     return true;
                 else if (createTable) {
-                    output.info("   Table " + snapshot.getTable() + " does not exist. Trying to create.");
-                    String sqlCreate = "create table " + snapshot.getTable() + " (" + snapshot.columns().map(c -> c + " " + (snapshot.getColumnTypes().get(c).getSql())).collect(Collectors.joining(", ")) + ", primary key (" + snapshot.pkColumns().collect(Collectors.joining(", ")) + "))";
-                    try (PreparedStatement create = conn.prepareStatement(sqlCreate)) {
+                    output.info("   Table " + snapshot.getTableName() + " does not exist. Trying to create.");
+                    try (PreparedStatement create = conn.prepareStatement(snapshot.getTable().createSql())) {
                         create.execute();
                         return true;
                     } catch (SQLException ex) {
                         output.error("      Creating table failed with: " + ex.getMessage());
-                        output.error("      Statement: " + sqlCreate);
+                        output.error("      Statement: " + snapshot.getTable().createSql());
                     }
                 }
             }
@@ -167,24 +212,18 @@ public class Crud implements AutoCloseable {
     }
 
     public Snapshot fetch(String table, String whereStmt) throws SQLException {
+        TableMeta tableMeta = tableMetaData(table);
+
         String sql = "select * from " + table + (whereStmt != null ? " where " + whereStmt : "");
         try (PreparedStatement stmt = conn.prepareStatement(sql, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)) {
             stmt.setFetchSize(1000);
             ResultSet rs = stmt.executeQuery();
             ResultSetMetaData rsmd = rs.getMetaData();
-            int columnCount = rsmd.getColumnCount();
+            int columnCount = tableMeta.columns.size();
 
-            Map<String, Snapshot.SqlType> columnTypes = new HashMap<>();
-            String[] columns = new String[columnCount];
-            int[] types = new int[columnCount];
-            for (int i = 1; i <= columnCount; i++) {
-                String columnName = isMixedCase ? rsmd.getColumnName(i) : rsmd.getColumnName(i).toLowerCase();
-                columns[i - 1] = columnName;
-                types[i - 1] = rsmd.getColumnType(i);
-                columnTypes.put(columnName, new Snapshot.SqlType(rsmd.getColumnType(i), rsmd.getPrecision(i), rsmd.getScale(i)));
-            }
+//            String columnName = isMixedCase ? rsmd.getColumnName(i) : rsmd.getColumnName(i).toLowerCase();
 
-            Snapshot snapshot = new Snapshot(table, columns, columnTypes, descPkOf(table), whereStmt);
+            Snapshot snapshot = new Snapshot(tableMeta, whereStmt);
 
             long rowCount = 0;
             while (rs.next()) {
@@ -192,8 +231,8 @@ public class Crud implements AutoCloseable {
                     output.userln("   " + rowCount + " rows so far");
                 String[] record = new String[columnCount];
 
-                for (int i = 1; i <= columnCount; i++)
-                    switch (types[i - 1]) {
+                for (int i = 1; i <= tableMeta.columns.size(); i++)
+                    switch (tableMeta.columns.get(i - 1).datatype) {
                         case BINARY:
                         case VARBINARY:
                         case LONGVARBINARY:
@@ -208,8 +247,8 @@ public class Crud implements AutoCloseable {
                             break;
                     }
 
-                for (int i = 1; i <= columnCount; i++)
-                    switch (types[i - 1]) {
+                for (int i = 1; i <= tableMeta.columns.size(); i++)
+                    switch (tableMeta.columns.get(i - 1).datatype) {
                         case TINYINT:
                         case SMALLINT:
                             short sho = rs.getShort(i);

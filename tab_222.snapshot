@@ -1,51 +1,81 @@
 {
-  "table" : "tab",
-  "columns" : [
-    "pk_char",
-    "col_char",
-    "col_date",
-    "pk_int",
-    "col_time"
-  ],
-  "columnTypes" : {
-    "col_date" : {
-      "type" : 91,
-      "precision" : 10,
-      "scale" : 0
+  "table" : {
+    "name" : "tab",
+    "remarks" : null,
+    "columns" : [
+      {
+        "position" : 1,
+        "name" : "pk_char",
+        "remarks" : null,
+        "datatype" : 12,
+        "columnSize" : 3,
+        "decimalDigits" : 0,
+        "defaultValue" : null,
+        "nullable" : false,
+        "autoIncrement" : false
+      },
+      {
+        "position" : 2,
+        "name" : "col_char",
+        "remarks" : null,
+        "datatype" : 12,
+        "columnSize" : 30,
+        "decimalDigits" : 0,
+        "defaultValue" : null,
+        "nullable" : true,
+        "autoIncrement" : false
+      },
+      {
+        "position" : 3,
+        "name" : "col_date",
+        "remarks" : null,
+        "datatype" : 91,
+        "columnSize" : 10,
+        "decimalDigits" : 0,
+        "defaultValue" : null,
+        "nullable" : true,
+        "autoIncrement" : false
+      },
+      {
+        "position" : 4,
+        "name" : "pk_int",
+        "remarks" : null,
+        "datatype" : 4,
+        "columnSize" : 32,
+        "decimalDigits" : 0,
+        "defaultValue" : null,
+        "nullable" : false,
+        "autoIncrement" : false
+      },
+      {
+        "position" : 5,
+        "name" : "col_time",
+        "remarks" : null,
+        "datatype" : 92,
+        "columnSize" : 8,
+        "decimalDigits" : 0,
+        "defaultValue" : "CURRENT_TIME",
+        "nullable" : true,
+        "autoIncrement" : false
+      }
+    ],
+    "primaryKey" : {
+      "name" : "constraint_1",
+      "columnNames" : [
+        "pk_char",
+        "pk_int"
+      ]
     },
-    "pk_char" : {
-      "type" : 12,
-      "precision" : 3,
-      "scale" : 0
-    },
-    "pk_int" : {
-      "type" : 4,
-      "precision" : 32,
-      "scale" : 0
-    },
-    "col_time" : {
-      "type" : 92,
-      "precision" : 8,
-      "scale" : 0
-    },
-    "col_char" : {
-      "type" : 12,
-      "precision" : 30,
-      "scale" : 0
-    }
+    "foreignKeys" : [ ]
   },
-  "primaryKey" : [
-    "pk_char",
-    "pk_int"
-  ],
   "where" : "pk_char = 222",
   "records" : [
     {
       "pk_char" : "222",
       "col_char" : "test123",
-      "col_date" : "2023-06-20",
+      "col_date" : "2023-07-03",
       "pk_int" : 1,
-      "col_time" : "19:48:30"
+      "col_time" : "20:14:27"
     }
   ]
 }

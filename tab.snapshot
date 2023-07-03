@@ -68,7 +68,7 @@
     },
     "foreignKeys" : [ ]
   },
-  "where" : "pk_char = 111",
+  "where" : "pk_char = '111'",
   "records" : [
     {
       "pk_char" : "111",
