@@ -1,4 +1,4 @@
-package de.crud;
+package org.makslist.dbd;
 
 import java.io.*;
 import java.nio.file.*;
@@ -121,6 +121,8 @@ public class Starter {
                 return Crud.connectOracle(config.getHostname(), config.getPort(), config.getServicename(), config.getUser(), config.getPassword(), config.isAutocommit());
             case "mysql":
                 return Crud.connectMySql(config.getHostname(), config.getPort(), config.getServicename(), config.getUser(), config.getPassword(), config.isAutocommit());
+            case "postgres":
+                return Crud.connectPostgres(config.getHostname(), config.getPort(), config.getServicename(), config.getUser(), config.getPassword(), config.isAutocommit());
             case "h2":
                 return Crud.connectH2(config.isAutocommit());
             case "hsql":

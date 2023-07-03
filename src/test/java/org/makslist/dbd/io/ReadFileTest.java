@@ -1,7 +1,7 @@
-package de.crud.io;
+package org.makslist.dbd.io;
 
-import de.crud.*;
 import org.junit.jupiter.api.*;
+import org.makslist.dbd.*;
 
 import java.io.*;
 

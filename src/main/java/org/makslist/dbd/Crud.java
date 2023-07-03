@@ -1,6 +1,7 @@
-package de.crud;
+package org.makslist.dbd;
 
 import oracle.jdbc.pool.*;
+import org.postgresql.ds.*;
 
 import java.io.*;
 import java.math.*;
@@ -66,6 +67,18 @@ public class Crud implements AutoCloseable {
             ods.setUser(user);
             ods.setPassword(password);
             return new Crud(user, ods.getConnection(), autocommit);
+        } catch (SQLException e) {
+            output.error("Connection unsuccessful: " + e.getMessage());
+            System.exit(1);
+        }
+        return null;
+    }
+
+    public static Crud connectPostgres(String hostname, int port, String databaseName, String user, String password, boolean autocommit) {
+        try {
+            final PGSimpleDataSource dataSource = new PGSimpleDataSource();
+            dataSource.setUrl("jdbc:postgresql://" + hostname + ":" + port + "/" + databaseName);
+            return new Crud(user, dataSource.getConnection(user, password), autocommit);
         } catch (SQLException e) {
             output.error("Connection unsuccessful: " + e.getMessage());
             System.exit(1);

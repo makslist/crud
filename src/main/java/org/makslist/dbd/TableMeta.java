@@ -1,4 +1,4 @@
-package de.crud;
+package org.makslist.dbd;
 
 import com.fasterxml.jackson.annotation.*;
 

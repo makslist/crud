@@ -1,4 +1,4 @@
-package de.crud;
+package org.makslist.dbd;
 
 import com.sanityinc.jargs.*;
 
@@ -9,6 +9,7 @@ import java.util.*;
 public class Config {
 
     public static final String COMMAND_LINE_PARAMETER = "Usage: dbd [{-v,--verbose}] [{--vendor} vendor name]\n" +
+            "           [h2, hsql, mysql, oracle, postgres]\n" +
             "           [{--hostname} url] [{--port} port number] [{--servicename} service name]\n" +
             "           [{--user} user name] [{--password} password] [{--commit} commit]\n" +
             "           [{-i, --import} file or path to reference file(s)]\n" +
