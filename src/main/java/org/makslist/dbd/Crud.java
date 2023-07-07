@@ -156,7 +156,10 @@ public class Crud implements AutoCloseable {
                 primaryKeyName = primaryKeys.getString("PK_NAME");
                 pkColumns.add(primaryKeys.getString("COLUMN_NAME").toLowerCase());
             }
-            pk = new TableMeta.PrimaryKey(primaryKeyName.toLowerCase(), pkColumns);
+            if (primaryKeyName != null)
+                pk = new TableMeta.PrimaryKey(primaryKeyName.toLowerCase(), pkColumns);
+            else
+                output.error("Table " + tableName + " has no primary key.");
         }
 //        try (ResultSet foreignKeys = metaData.getImportedKeys(null, null, tableName.toUpperCase())) {
 //            while (foreignKeys.next()) {
