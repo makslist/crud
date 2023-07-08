@@ -114,7 +114,9 @@ public class Snapshot {
 
         Record rec = new Record(this, record);
         records.add(rec);
-        index.put(rec.key(), rec);
+        Key key = rec.key();
+        if (key != null)
+            index.put(key, rec);
     }
 
     public boolean isEmpty() {
@@ -265,6 +267,8 @@ public class Snapshot {
         }
 
         public Key key() {
+            if (snapshot.table.primaryKey == null)
+                return null;
             //TODO
             String[] keyElems = new String[snapshot.table.primaryKey.columnCount];
 //            System.arraycopy(columns, 0, keyElems, 0, snapshot.table.primaryKeys.size());

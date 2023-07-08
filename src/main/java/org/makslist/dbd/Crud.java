@@ -120,20 +120,19 @@ public class Crud implements AutoCloseable {
         ResultSet tables = metaData.getTables(null, user.toUpperCase(), pattern == null || pattern.isEmpty() ? "%" : pattern.toUpperCase(), types);
         while (tables.next())
             result.add(tables.getString("TABLE_NAME"));
-//        String remarks = resultSet.getString("REMARKS");
         return result;
     }
 
     public TableMeta tableMetaData(String tableName) throws SQLException {
         DatabaseMetaData metaData = conn.getMetaData();
         String tableRemarks = null;
-        try (ResultSet resultSet = metaData.getTables(null, null, tableName.toUpperCase(), new String[]{"TABLE"})) {
+        try (ResultSet resultSet = metaData.getTables(null, user.toUpperCase(), tableName.toUpperCase(), new String[]{"TABLE"})) {
             while (resultSet.next())
                 tableRemarks = resultSet.getString("REMARKS");
         }
 
         List<TableMeta.Column> columns = new ArrayList<>();
-        try (ResultSet column = metaData.getColumns(null, null, tableName.toUpperCase(), null)) {
+        try (ResultSet column = metaData.getColumns(null, user.toUpperCase(), tableName.toUpperCase(), null)) {
             while (column.next()) {
                 int position = column.getInt("ORDINAL_POSITION");
                 String columnName = column.getString("COLUMN_NAME").toLowerCase();
@@ -143,13 +142,13 @@ public class Crud implements AutoCloseable {
                 int decimalDigits = column.getInt("DECIMAL_DIGITS");
                 boolean isNullable = "YES".equals(column.getString("IS_NULLABLE"));
                 boolean isAutoIncrement = "YES".equals(column.getString("IS_AUTOINCREMENT"));
-                String defaultValue = column.getString("COLUMN_DEF");
-                columns.add(new TableMeta.Column(position, columnName, remarks, datatype, columnSize, decimalDigits, isNullable, isAutoIncrement, defaultValue));
+                String defaultValue = null;//column.getString("COLUMN_DEF");
+                columns.add(new TableMeta.Column(position, columnName.toLowerCase(), remarks, datatype, columnSize, decimalDigits, isNullable, isAutoIncrement, defaultValue));
             }
         }
 
         TableMeta.PrimaryKey pk = null;
-        try (ResultSet primaryKeys = metaData.getPrimaryKeys(null, null, tableName.toUpperCase())) {
+        try (ResultSet primaryKeys = metaData.getPrimaryKeys(null, user.toUpperCase(), tableName.toUpperCase())) {
             String primaryKeyName = null;
             List<String> pkColumns = new ArrayList<>();
             while (primaryKeys.next()) {
@@ -163,21 +162,22 @@ public class Crud implements AutoCloseable {
         }
 
         List<TableMeta.ForeignKey> fks = new ArrayList<>();
-        try (ResultSet foreignKeys = metaData.getImportedKeys(null, null, tableName.toUpperCase())) {
-            String fkName = foreignKeys.getString("FK_NAME");
+        try (ResultSet foreignKeys = metaData.getImportedKeys(null, user.toUpperCase(), tableName.toUpperCase())) {
+            String fkName = null;
             List<TableMeta.ForeignKey.ColumnMapping> mapping = new ArrayList<>();
             while (foreignKeys.next()) {
+                fkName = foreignKeys.getString("FK_NAME");
                 String pkTableName = foreignKeys.getString("PKTABLE_NAME");
                 String pkColumnName = foreignKeys.getString("PKCOLUMN_NAME");
                 String fkTableName = foreignKeys.getString("FKTABLE_NAME");
                 String fkColumnName = foreignKeys.getString("FKCOLUMN_NAME");
-                mapping.add(new TableMeta.ForeignKey.ColumnMapping(pkTableName, pkColumnName, fkTableName, fkColumnName));
+                mapping.add(new TableMeta.ForeignKey.ColumnMapping(pkTableName.toLowerCase(), pkColumnName.toLowerCase(), fkTableName.toLowerCase(), fkColumnName.toLowerCase()));
             }
             if (fkName != null)
-                fks.add(new TableMeta.ForeignKey(fkName, mapping));
+                fks.add(new TableMeta.ForeignKey(fkName.toLowerCase(), mapping));
         }
 
-        return new TableMeta(tableName, tableRemarks, columns, pk, fks);
+        return new TableMeta(tableName.toLowerCase(), tableRemarks, columns, pk, fks);
     }
 
     public ChangeSet delta(Snapshot snapshot, List<String> ignoreColumns) throws SQLException {
@@ -323,7 +323,8 @@ public class Crud implements AutoCloseable {
                         case STRUCT:
                         case DISTINCT:
                         case REF:
-                            throw new RuntimeException("ResultSetSerializer not yet implemented for SQL type REF");
+                            output.error("ResultSetSerializer not yet implemented for SQL type REF");
+                            break;
                         case NVARCHAR:
                         case VARCHAR:
                         case LONGNVARCHAR:

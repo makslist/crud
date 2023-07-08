@@ -1,25 +1,23 @@
 <component name="ArtifactManager">
-  <artifact type="jar" build-on-make="true" name="dbd:jar">
-    <output-path>$PROJECT_DIR$/out/artifacts</output-path>
-    <properties id="ant-preprocessing">
-      <options enabled="true" />
-    </properties>
-    <root id="archive" name="dbd.jar">
-      <element id="directory" name="META-INF">
-        <element id="file-copy" path="$PROJECT_DIR$/META-INF/MANIFEST.MF" />
+  <artifact build-on-make="true" name="dbd:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/dbdelta</output-path>
+    <root id="root">
+      <element id="archive" name="dbdelta.jar">
+        <element id="module-output" name="dbdelta" />
       </element>
-      <element id="module-output" name="dbdelta" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/oracle/database/jdbc/ojdbc11/23.2.0.0/ojdbc11-23.2.0.0.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/fasterxml/jackson/core/jackson-databind/2.13.4.1/jackson-databind-2.13.4.1.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/sanityinc/jargs/2.0-SNAPSHOT/jargs-2.0-20130121.212743-2.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/fasterxml/jackson/core/jackson-core/2.13.4/jackson-core-2.13.4.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/mysql/mysql-connector-java/8.0.28/mysql-connector-java-8.0.28.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/h2database/h2/2.1.214/h2-2.1.214.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/hsqldb/hsqldb/2.7.1/hsqldb-2.7.1.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/fasterxml/jackson/core/jackson-annotations/2.13.4/jackson-annotations-2.13.4.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/google/protobuf/protobuf-java/3.11.4/protobuf-java-3.11.4.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/jetbrains/annotations/23.0.0/annotations-23.0.0.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/postgresql/postgresql/42.6.0/postgresql-42.6.0.jar" path-in-jar="/" />
+      <element id="directory" name="lib">
+        <element id="library" level="project" name="Maven: com.fasterxml.jackson.core:jackson-annotations:2.15.1" />
+        <element id="library" level="project" name="Maven: com.fasterxml.jackson.core:jackson-core:2.15.1" />
+        <element id="library" level="project" name="Maven: com.fasterxml.jackson.core:jackson-databind:2.15.1" />
+        <element id="library" level="project" name="Maven: com.google.protobuf:protobuf-java:3.21.9" />
+        <element id="library" level="project" name="Maven: com.h2database:h2:2.1.214" />
+        <element id="library" level="project" name="Maven: com.mysql:mysql-connector-j:8.0.33" />
+        <element id="library" level="project" name="Maven: com.oracle.database.jdbc:ojdbc8:23.2.0.0" />
+        <element id="library" level="project" name="Maven: com.sanityinc:jargs:2.0-SNAPSHOT" />
+        <element id="library" level="project" name="Maven: org.checkerframework:checker-qual:3.31.0" />
+        <element id="library" level="project" name="Maven: org.hsqldb:hsqldb:2.7.1" />
+        <element id="library" level="project" name="Maven: org.postgresql:postgresql:42.6.0" />
+      </element>
     </root>
   </artifact>
 </component>

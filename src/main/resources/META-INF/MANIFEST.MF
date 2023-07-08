@@ -1,0 +1,8 @@
+Manifest-Version: 1.0
+Main-Class: org.makslist.dbd.Starter
+Class-Path: lib/jargs-2.0-20130121.212743-2.jar lib/checker-qual-3.31.0.
+ jar lib/jackson-annotations-2.15.1.jar lib/protobuf-java-3.21.9.jar lib
+ /jackson-databind-2.15.1.jar lib/hsqldb-2.7.1.jar lib/h2-2.1.214.jar li
+ b/jackson-core-2.15.1.jar lib/ojdbc8-23.2.0.0.jar lib/mysql-connector-j
+ -8.0.33.jar lib/postgresql-42.6.0.jar
+

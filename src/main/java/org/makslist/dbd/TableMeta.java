@@ -27,7 +27,8 @@ public class TableMeta {
         this.remarks = remarks;
         this.columns = columns;
         this.primaryKey = primaryKey;
-        this.primaryKey.setBackref(this);
+        if (this.primaryKey != null)
+            this.primaryKey.setBackref(this);
         this.foreignKeys = foreignKeys;
 
         columnIndex = columns.stream().collect(Collectors.toMap(c -> c.name, c -> c.position - 1));
@@ -204,19 +205,38 @@ public class TableMeta {
     }
 
     public static class ForeignKey {
-        final String name;
-        final List<ColumnMapping> mappings;
+        String name;
+        List<ColumnMapping> mappings;
+
+        public ForeignKey() {
+        }
 
         public ForeignKey(String name, List<ColumnMapping> mappings) {
             this.name = name;
             this.mappings = mappings;
         }
 
+        public String getName() {
+            return name;
+        }
+
+        public List<ColumnMapping> getMappings() {
+            return mappings;
+        }
+
+        public void setMappings(List<ColumnMapping> mappings) {
+            this.mappings = mappings;
+        }
+
         public static class ColumnMapping {
-            final String pkTableName;
-            final String fkTableName;
-            final String pkColumnName;
-            final String fkColumnName;
+
+            String pkTableName;
+            String fkTableName;
+            String pkColumnName;
+            String fkColumnName;
+
+            public ColumnMapping() {
+            }
 
             public ColumnMapping(String pkTableName, String pkColumnName, String fkTableName, String fkColumnName) {
                 this.pkTableName = pkTableName;
@@ -224,6 +244,23 @@ public class TableMeta {
                 this.fkTableName = fkTableName;
                 this.fkColumnName = fkColumnName;
             }
+
+            public String getPkTableName() {
+                return pkTableName;
+            }
+
+            public String getFkTableName() {
+                return fkTableName;
+            }
+
+            public String getPkColumnName() {
+                return pkColumnName;
+            }
+
+            public String getFkColumnName() {
+                return fkColumnName;
+            }
+
         }
 
     }
