@@ -41,17 +41,6 @@ public class SnapshotExportTest {
     }
 
     @Test
-    void descPkOfTable() {
-        try {
-            List<String> pk = crud.descPkOf("tab");
-            Assertions.assertEquals("pk_char", pk.get(0));
-            Assertions.assertEquals("pk_int", pk.get(1));
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    @Test
     void tableMetaData() {
         try {
             TableMeta meta = crud.tableMetaData("tab");

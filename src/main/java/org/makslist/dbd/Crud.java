@@ -148,7 +148,7 @@ public class Crud implements AutoCloseable {
             }
         }
 
-        TableMeta.PrimaryKey pk;
+        TableMeta.PrimaryKey pk = null;
         try (ResultSet primaryKeys = metaData.getPrimaryKeys(null, null, tableName.toUpperCase())) {
             String primaryKeyName = null;
             List<String> pkColumns = new ArrayList<>();
@@ -161,37 +161,23 @@ public class Crud implements AutoCloseable {
             else
                 output.error("Table " + tableName + " has no primary key.");
         }
-//        try (ResultSet foreignKeys = metaData.getImportedKeys(null, null, tableName.toUpperCase())) {
-//            while (foreignKeys.next()) {
-//                String pkTableName = foreignKeys.getString("PKTABLE_NAME");
-//                String fkTableName = foreignKeys.getString("FKTABLE_NAME");
-//                String pkColumnName = foreignKeys.getString("PKCOLUMN_NAME");
-//                String fkColumnName = foreignKeys.getString("FKCOLUMN_NAME");
-//            }
-//        }
 
-        return new TableMeta(tableName, tableRemarks, columns, pk, Collections.emptyList());
-    }
-
-    public List<String> descPkOf(String table) throws SQLException {
-        boolean isMixedCase = conn.getMetaData().storesMixedCaseIdentifiers();
-        ResultSet rsPkUser = conn.getMetaData().getPrimaryKeys(null, user.toUpperCase(), isMixedCase ? table : table.toUpperCase());
-        List<String> pkColumns = new ArrayList<>();
-        while (rsPkUser.next()) {
-            String columnName = rsPkUser.getString("COLUMN_NAME");
-            pkColumns.add(isMixedCase ? columnName : columnName.toLowerCase());
+        List<TableMeta.ForeignKey> fks = new ArrayList<>();
+        try (ResultSet foreignKeys = metaData.getImportedKeys(null, null, tableName.toUpperCase())) {
+            String fkName = foreignKeys.getString("FK_NAME");
+            List<TableMeta.ForeignKey.ColumnMapping> mapping = new ArrayList<>();
+            while (foreignKeys.next()) {
+                String pkTableName = foreignKeys.getString("PKTABLE_NAME");
+                String pkColumnName = foreignKeys.getString("PKCOLUMN_NAME");
+                String fkTableName = foreignKeys.getString("FKTABLE_NAME");
+                String fkColumnName = foreignKeys.getString("FKCOLUMN_NAME");
+                mapping.add(new TableMeta.ForeignKey.ColumnMapping(pkTableName, pkColumnName, fkTableName, fkColumnName));
+            }
+            if (fkName != null)
+                fks.add(new TableMeta.ForeignKey(fkName, mapping));
         }
-        if (!pkColumns.isEmpty())
-            return pkColumns;
 
-        ResultSet rsPk = conn.getMetaData().getPrimaryKeys(null, null, isMixedCase ? table : table.toUpperCase());
-        String schema = null;
-        while (rsPk.next() && (schema == null || schema.equals(rsPk.getString("TABLE_SCHEM")))) {
-            schema = rsPk.getString("TABLE_SCHEM");
-            String columnName = rsPk.getString("COLUMN_NAME");
-            pkColumns.add(isMixedCase ? columnName : columnName.toLowerCase());
-        }
-        return pkColumns;
+        return new TableMeta(tableName, tableRemarks, columns, pk, fks);
     }
 
     public ChangeSet delta(Snapshot snapshot, List<String> ignoreColumns) throws SQLException {

@@ -2,10 +2,12 @@ package org.makslist.dbd;
 
 import com.fasterxml.jackson.annotation.*;
 
+import java.sql.*;
 import java.util.*;
 import java.util.stream.*;
 
-import static java.sql.Types.*;
+import static java.sql.Types.NUMERIC;
+import static java.sql.Types.VARCHAR;
 
 public class TableMeta {
 
@@ -141,88 +143,18 @@ public class TableMeta {
 
         @JsonIgnore
         public String getTypeSql() {
+            String format;
             switch (datatype) {
-                case BIT:
-                    return "bit";
-                case TINYINT:
-                    return "tinyint";
-                case SMALLINT:
-                    return "smallint";
-                case INTEGER:
-                    return "integer";
-                case BIGINT:
-                    return "bigint";
-                case FLOAT:
-                    return "float";
-                case REAL:
-                    return "real";
-                case DOUBLE:
-                    return "double";
                 case NUMERIC:
-                    return String.format("numeric%s", columnSize == 0 ? "" : String.format(" (%d%s)", columnSize, (decimalDigits != 0 && decimalDigits != -127) ? ", " + decimalDigits : ""));
-                case DECIMAL:
-                    return "decimal";
-                case CHAR:
-                    return "char";
+                    format = String.format("numeric%s", columnSize == 0 ? "" : String.format(" (%d%s)", columnSize, (decimalDigits != 0 && decimalDigits != -127) ? ", " + decimalDigits : ""));
+                    break;
                 case VARCHAR:
-                    return "varchar(" + columnSize + ")";
-                case LONGVARCHAR:
-                    return "longvarchar";
-                case DATE:
-                    return "date";
-                case TIME:
-                    return "time";
-                case TIMESTAMP:
-                    return "timestamp";
-                case BINARY:
-                    return "binary";
-                case VARBINARY:
-                    return "varbinary";
-                case LONGVARBINARY:
-                    return "longvarbinary";
-                case NULL:
-                    return "null";
-                case OTHER:
-                    return "other";
-                case JAVA_OBJECT:
-                    return "java_object";
-                case DISTINCT:
-                    return "distinct";
-                case STRUCT:
-                    return "struct";
-                case ARRAY:
-                    return "array";
-                case BLOB:
-                    return "blob";
-                case CLOB:
-                    return "clob";
-                case REF:
-                    return "ref";
-                case DATALINK:
-                    return "datalink";
-                case BOOLEAN:
-                    return "boolean";
-                case ROWID:
-                    return "rowid";
-                case NCHAR:
-                    return "nchar";
-                case NVARCHAR:
-                    return "nvarchar";
-                case LONGNVARCHAR:
-                    return "longnvarchar";
-                case NCLOB:
-                    return "nclob";
-                case SQLXML:
-                    return "sqlxml";
-                case REF_CURSOR:
-                    return "ref_cursor";
-                case TIME_WITH_TIMEZONE:
-                    return "time_with_timezone";
-                case TIMESTAMP_WITH_TIMEZONE:
-                    return "timestamp_with_timezone";
+                    format = "(" + columnSize + ")";
+                    break;
                 default:
-                    throw new IllegalStateException("Unexpected value: " + datatype);
+                    format = "";
             }
+            return JDBCType.valueOf(datatype).getName() + format;
         }
     }
 
@@ -272,25 +204,26 @@ public class TableMeta {
     }
 
     public static class ForeignKey {
-        final String pkTableName = null;
-        final String fkTableName = null;
-        final String pkColumnName = null;
-        final String fkColumnName = null;
+        final String name;
+        final List<ColumnMapping> mappings;
 
-        public String getPkTableName() {
-            return pkTableName;
+        public ForeignKey(String name, List<ColumnMapping> mappings) {
+            this.name = name;
+            this.mappings = mappings;
         }
 
-        public String getFkTableName() {
-            return fkTableName;
-        }
+        public static class ColumnMapping {
+            final String pkTableName;
+            final String fkTableName;
+            final String pkColumnName;
+            final String fkColumnName;
 
-        public String getPkColumnName() {
-            return pkColumnName;
-        }
-
-        public String getFkColumnName() {
-            return fkColumnName;
+            public ColumnMapping(String pkTableName, String pkColumnName, String fkTableName, String fkColumnName) {
+                this.pkTableName = pkTableName;
+                this.pkColumnName = pkColumnName;
+                this.fkTableName = fkTableName;
+                this.fkColumnName = fkColumnName;
+            }
         }
 
     }

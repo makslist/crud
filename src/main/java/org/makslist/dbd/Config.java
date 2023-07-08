@@ -19,9 +19,10 @@ public class Config {
             "               [{--ignoreColumns} ignore columns when comparing]\n" +
             "           [{-d, --delta} file or path to reference file(s)]\n" +
             "               [{--ignoreColumns} ignore columns when comparing]\n" +
-            "           [{-e, --export} name (incl. wildcards) of the table(s) to export]\n" +
+            "           [{-e, --export} name (incl. wildcards) of the table(s) entries to export]\n" +
             "               [{-w, --where} where statement]\n" +
-            "               [{--timestamp} add a timestamp to the filename]";
+            "               [{--timestamp} add a timestamp to the filename]\n" +
+            "           [{-t, --table} exports table metadata< name (incl. wildcards) of the table(s) to export]\n";
 
     private static Config loadConfig() {
         Config config = new Config();
