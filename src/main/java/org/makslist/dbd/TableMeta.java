@@ -9,6 +9,7 @@ import java.util.stream.*;
 import static java.sql.Types.NUMERIC;
 import static java.sql.Types.VARCHAR;
 
+@SuppressWarnings("ALL")
 public class TableMeta {
 
     String name = null;
@@ -34,18 +35,22 @@ public class TableMeta {
         columnIndex = columns.stream().collect(Collectors.toMap(c -> c.name, c -> c.position - 1));
     }
 
+    @SuppressWarnings("unused")
     public String getName() {
         return name;
     }
 
+    @SuppressWarnings("unused")
     public String getRemarks() {
         return remarks;
     }
 
+    @SuppressWarnings("unused")
     public List<Column> getColumns() {
         return columns;
     }
 
+    @SuppressWarnings("unused")
     public PrimaryKey getPrimaryKey() {
         return primaryKey;
     }
@@ -55,6 +60,7 @@ public class TableMeta {
         this.primaryKey.setBackref(this);
     }
 
+    @SuppressWarnings("unused")
     public List<ForeignKey> getForeignKeys() {
         return foreignKeys;
     }
@@ -64,6 +70,7 @@ public class TableMeta {
         return primaryKey.columnNames.stream().flatMap(n -> columns.stream().filter(c -> n.equals(c.name)));
     }
 
+    @SuppressWarnings("unused")
     public static class Column {
 
         int position;
@@ -159,6 +166,7 @@ public class TableMeta {
         }
     }
 
+    @SuppressWarnings("unused")
     public static class PrimaryKey {
         TableMeta table;
         String name = null;

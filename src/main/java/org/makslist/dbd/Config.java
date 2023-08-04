@@ -22,7 +22,9 @@ public class Config {
             "           [{-e, --export} name (incl. wildcards) of the table(s) entries to export]\n" +
             "               [{-w, --where} where statement]\n" +
             "               [{--timestamp} add a timestamp to the filename]\n" +
-            "           [{-t, --table} exports table metadata< name (incl. wildcards) of the table(s) to export]\n";
+            "           [{--table} exports table metadata; name (incl. wildcards) of the table(s) to export]\n" +
+            "           [{--view} exports view metadata; name (incl. wildcards) of the table(s) to export]\n" +
+            "           [{--procedure} exports procedure metadata; name (incl. wildcards) of the table(s) to export]\n";
 
     private static Config loadConfig() {
         Config config = new Config();
@@ -82,6 +84,10 @@ public class Config {
 
         CmdLineParser.Option<String> showDeltaFor = parser.addStringOption('d', "delta");
 
+        CmdLineParser.Option<String> table = parser.addStringOption("table");
+        CmdLineParser.Option<String> view = parser.addStringOption("view");
+        CmdLineParser.Option<String> procedure = parser.addStringOption("procedure");
+
         try {
             parser.parse(args);
         } catch (CmdLineParser.OptionException e) {
@@ -118,6 +124,10 @@ public class Config {
 
         config.showDeltaFor = parser.getOptionValue(showDeltaFor, null);
 
+        config.table = parser.getOptionValue(table, null);
+        config.view = parser.getOptionValue(view, null);
+        config.procedure = parser.getOptionValue(procedure, null);
+
         return config.merge(Config.loadConfig()); // args have precedence over config
     }
 
@@ -148,6 +158,9 @@ public class Config {
 
         showDeltaFor = showDeltaFor != null ? showDeltaFor : config.showDeltaFor;
 
+        table = table != null ? table : config.table;
+        view = view != null ? view : config.view;
+
         return this;
     }
 
@@ -173,8 +186,10 @@ public class Config {
     private String exportTable;
     private boolean exportTime;
     private String exportWhere;
-
     private String showDeltaFor;
+    private String table;
+    private String view;
+    private String procedure;
 
     public boolean isVerbose() {
         return verbose;
@@ -250,6 +265,18 @@ public class Config {
 
     public String showDeltaFor() {
         return showDeltaFor;
+    }
+
+    public String tableMeta() {
+        return table;
+    }
+
+    public String viewMeta() {
+        return view;
+    }
+
+    public String procedureMeta() {
+        return procedure;
     }
 
 }

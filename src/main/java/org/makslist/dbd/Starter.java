@@ -109,6 +109,26 @@ public class Starter {
                     System.exit(2);
                 }
 
+            } else if (config.viewMeta() != null) {
+                if (config.viewMeta().contains("%")) {
+                    for (String name : crud.allViews(config.viewMeta())) {
+                        View view = crud.view(name);
+                        System.out.println(view.toString());
+                    }
+                } else {
+                    View view = crud.view(config.viewMeta());
+                    System.out.println(view.toString());
+                }
+            } else if (config.procedureMeta() != null) {
+                if (config.procedureMeta().contains("%")) {
+                    for (String name : crud.allProcedures(config.procedureMeta())) {
+                        StoredProcedure prc = crud.procedure(name);
+                        System.out.println(prc.toString());
+                    }
+                } else {
+                    StoredProcedure prc = crud.procedure(config.procedureMeta());
+                    System.out.println(prc.toString());
+                }
             } else output.error("No usable parameters given!");
         } catch (Exception e) {
             e.printStackTrace();

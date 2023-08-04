@@ -116,6 +116,8 @@ public class Crud implements AutoCloseable {
     public List<String> tables(String pattern) throws SQLException {
         List<String> result = new ArrayList<>();
         DatabaseMetaData metaData = conn.getMetaData();
+        String userName = metaData.getUserName();
+
         String[] types = {"TABLE"};
         ResultSet tables = metaData.getTables(null, user.toUpperCase(), pattern == null || pattern.isEmpty() ? "%" : pattern.toUpperCase(), types);
         while (tables.next())
@@ -125,14 +127,15 @@ public class Crud implements AutoCloseable {
 
     public TableMeta tableMetaData(String tableName) throws SQLException {
         DatabaseMetaData metaData = conn.getMetaData();
+        String userName = metaData.getUserName();
         String tableRemarks = null;
-        try (ResultSet resultSet = metaData.getTables(null, user.toUpperCase(), tableName.toUpperCase(), new String[]{"TABLE"})) {
+        try (ResultSet resultSet = metaData.getTables(null, null, tableName.toUpperCase(), new String[]{"TABLE"})) {
             while (resultSet.next())
                 tableRemarks = resultSet.getString("REMARKS");
         }
 
         List<TableMeta.Column> columns = new ArrayList<>();
-        try (ResultSet column = metaData.getColumns(null, user.toUpperCase(), tableName.toUpperCase(), null)) {
+        try (ResultSet column = metaData.getColumns(null, null, tableName.toUpperCase(), null)) {
             while (column.next()) {
                 int position = column.getInt("ORDINAL_POSITION");
                 String columnName = column.getString("COLUMN_NAME").toLowerCase();
@@ -148,7 +151,7 @@ public class Crud implements AutoCloseable {
         }
 
         TableMeta.PrimaryKey pk = null;
-        try (ResultSet primaryKeys = metaData.getPrimaryKeys(null, user.toUpperCase(), tableName.toUpperCase())) {
+        try (ResultSet primaryKeys = metaData.getPrimaryKeys(null, null, tableName.toUpperCase())) {
             String primaryKeyName = null;
             List<String> pkColumns = new ArrayList<>();
             while (primaryKeys.next()) {
@@ -162,7 +165,7 @@ public class Crud implements AutoCloseable {
         }
 
         List<TableMeta.ForeignKey> fks = new ArrayList<>();
-        try (ResultSet foreignKeys = metaData.getImportedKeys(null, user.toUpperCase(), tableName.toUpperCase())) {
+        try (ResultSet foreignKeys = metaData.getImportedKeys(null, null, tableName.toUpperCase())) {
             String fkName = null;
             List<TableMeta.ForeignKey.ColumnMapping> mapping = new ArrayList<>();
             while (foreignKeys.next()) {
@@ -178,6 +181,22 @@ public class Crud implements AutoCloseable {
         }
 
         return new TableMeta(tableName.toLowerCase(), tableRemarks, columns, pk, fks);
+    }
+
+    public List<String> allViews(String pattern) throws SQLException {
+        return View.all(user, pattern, conn);
+    }
+
+    public View view(String name) throws SQLException {
+        return View.ddl(name, conn);
+    }
+
+    public List<String> allProcedures(String pattern) throws SQLException {
+        return StoredProcedure.all(user, pattern, conn);
+    }
+
+    public StoredProcedure procedure(String name) throws SQLException {
+        return StoredProcedure.ddl(user, name, conn);
     }
 
     public ChangeSet delta(Snapshot snapshot, List<String> ignoreColumns) throws SQLException {
